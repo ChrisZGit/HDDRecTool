@@ -14,11 +14,12 @@ class FileHandler
 {
 private:
 	std::string inFolder;
+	std::string outFolder;
 	std::vector<FileReader*> inFiles;
 
 public:
 	FileHandler();
-	FileHandler(std::string inputFolder);
+	FileHandler(std::string inputFolder, std::string outputFolder);
 
 	//std::vector<FileReader*> getInFiles();
 	char * getBuffer(int buf);

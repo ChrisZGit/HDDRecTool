@@ -1,8 +1,10 @@
 #include <fileHandler.h>
 
 
-FileHandler::FileHandler(std::string inputFolder)
+FileHandler::FileHandler(std::string inputFolder, std::string outputFolder)
 {
+	inFolder = inputFolder;
+	outFolder = outputFolder;
 	DIR *dpdf;
 	struct dirent *epdf;
 

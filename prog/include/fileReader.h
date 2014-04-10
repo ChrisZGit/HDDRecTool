@@ -12,10 +12,11 @@ private:
 	std::ifstream fs;
 	char buffer[BUFLENGTH];
 	size_t endOfBuf;
+	std::string inPath;
 
 public:
 	FileReader();
-	FileReader(std::string path){}
+	FileReader(std::string path){inPath = path;}
 
 };
 

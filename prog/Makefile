@@ -14,7 +14,8 @@ OBJPATH=./obj/
 
 objects=$(OBJPATH)raidSystem.o\
 		$(OBJPATH)fileHandler.o\
-		$(OBJPATH)fileReader.o
+		$(OBJPATH)fileReader.o\
+		$(OBJPATH)fileWriter.o\
 
 
 all: exe
@@ -33,6 +34,9 @@ $(OBJPATH)fileReader.o: $(INCPATH)fileReader.h $(SRCPATH)fileReader.cpp
 
 $(OBJPATH)fileHandler.o: $(INCPATH)fileHandler.h $(SRCPATH)fileHandler.cpp
 	$(CC) $(OPT) $(INC) $(LIBS) -c -o $(OBJPATH)fileHandler.o $(SRCPATH)fileHandler.cpp
+
+$(OBJPATH)fileWriter.o: $(INCPATH)fileWriter.h $(SRCPATH)fileWriter.cpp
+	$(CC) $(OPT) $(INC) $(LIBS) -c -o $(OBJPATH)fileWriter.o $(SRCPATH)fileWriter.cpp
 
 clean:
 	rm -rf $(OBJPATH) $(BINPATH)

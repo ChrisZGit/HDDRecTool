@@ -9,21 +9,24 @@
 int main(int argc, char *argv[])
 {
 	//Check the Parameters
-	std::string path;
-	if (argc < 2)
+	std::string inPath;
+	std::string outPath;
+	if (argc < 3)
 	{
-        std::cerr << "Not enough Parameters. Try at least './bin/runme [Path to Image]'" << std::endl;
+        std::cerr << "Not enough Parameters. Try at least './bin/runme [Path to Image] [Path to Output-Folder]'" << std::endl;
         return 1;
 	} 
-	else if (argc < 5)
+	else if (argc < 6)
 	{
 		std::cout << "Running without Parameters." << std::endl;
-		std::cout << "Maybe try next time './bin/runme [Path to Image] [RaidVersion] [Stripesize] [Number of lost Images]'" << std::endl;
+		std::cout << "Maybe try next time './bin/runme [Path to Image] [Path to Output-Folder] [RaidVersion] [Stripesize] [Number of lost Images]'" << std::endl;
     }
 
 	//Check the Raid System
-	path=argv[1];
-	path+="/";
+	inPath=argv[1];
+	inPath+="/";
+	outPath = argv[2];
+	outPath += "/";
 	int raidVersion = 6;
 	//Raid System was set
 	if (argc > 2)
@@ -35,7 +38,7 @@ int main(int argc, char *argv[])
 		}
 	}
 	//ditt ding wird allen gegeben
-	FileHandler f(path);
+	FileHandler f(inPath, outPath);
 
 	//Raid System was not set
 	//call checkRaidSystem-Class
