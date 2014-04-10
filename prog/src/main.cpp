@@ -40,6 +40,14 @@ int main(int argc, char *argv[])
 	//ditt ding wird allen gegeben
 	FileHandler f(inPath, outPath);
 
+	FileReader *tmp = f.getFileReader(0);
+	int count=0;
+	while (tmp->newBlock())
+	{
+		++count;
+		std::cout << tmp->getBufferSize() << std::endl;
+	}
+	std::cout << count << std::endl;
 	//Raid System was not set
 	//call checkRaidSystem-Class
 	//this should return

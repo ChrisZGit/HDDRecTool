@@ -23,3 +23,19 @@ FileHandler::FileHandler(std::string inputFolder, std::string outputFolder)
 		}
 	}
 }
+
+std::vector<FileReader *> FileHandler::getInFiles()
+{
+	return inFiles;
+}
+
+FileReader * FileHandler::getFileReader(size_t num)
+{
+	if (num >= inFiles.size())
+	{
+		std::cerr << "ERROR in FileHandler::getFileReader - num smaller than available Images" << std::endl;
+		return NULL;
+	}
+	return inFiles.at(num);
+}
+

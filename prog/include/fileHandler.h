@@ -21,8 +21,8 @@ public:
 	FileHandler();
 	FileHandler(std::string inputFolder, std::string outputFolder);
 
-	//std::vector<FileReader*> getInFiles();
-	char * getBuffer(int buf);
+	std::vector<FileReader*> getInFiles();
+	FileReader *getFileReader(size_t num);
 };
 
 #endif
