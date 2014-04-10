@@ -1,13 +1,15 @@
 #include <fileReader.h>
 
-FileReader::FileReader(std::string path)
+FileReader::FileReader(std::string inPath)
 {
+	path=inPath;
 	fs.open(path.c_str(), std::fstream::in);
 	if (fs==NULL)
 	{
 		std::cerr << "ERROR FileReader::FileReader - Couldnt open file: " << path << std::endl;
 	}
 	endOfBuf = 0;
+	newBlock();
 }
 
 char *FileReader::getBuffer()
@@ -32,5 +34,11 @@ bool FileReader::newBlock()
 		return false;
 	}
 	return true;
+}
+
+void FileReader::reset()
+{
+	if (fs.good())
+		fs.seekg(0);
 }
 

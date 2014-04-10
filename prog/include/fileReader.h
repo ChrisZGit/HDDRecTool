@@ -12,14 +12,16 @@ private:
 	std::ifstream fs;
 	char buffer[BUFLENGTH];
 	size_t endOfBuf;
+	std::string path;
 
 public:
 	FileReader();
-	FileReader(std::string path);
+	FileReader(std::string inPath);
 
 	char *getBuffer();
 	size_t getBufferSize();
 	bool newBlock();
+	void reset();
 };
 
 #endif

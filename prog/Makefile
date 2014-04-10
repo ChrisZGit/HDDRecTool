@@ -16,6 +16,7 @@ objects=$(OBJPATH)raidSystem.o\
 		$(OBJPATH)fileHandler.o\
 		$(OBJPATH)fileReader.o\
 		$(OBJPATH)fileWriter.o\
+		$(OBJPATH)raidRecover.o\
 
 
 all: exe
@@ -37,6 +38,9 @@ $(OBJPATH)fileHandler.o: $(INCPATH)fileHandler.h $(SRCPATH)fileHandler.cpp
 
 $(OBJPATH)fileWriter.o: $(INCPATH)fileWriter.h $(SRCPATH)fileWriter.cpp
 	$(CC) $(OPT) $(INC) $(LIBS) -c -o $(OBJPATH)fileWriter.o $(SRCPATH)fileWriter.cpp
+
+$(OBJPATH)raidRecover.o: $(INCPATH)raidRecover.h $(SRCPATH)raidRecover.cpp
+	$(CC) $(OPT) $(INC) $(LIBS) -c -o $(OBJPATH)raidRecover.o $(SRCPATH)raidRecover.cpp
 
 clean:
 	rm -rf $(OBJPATH) $(BINPATH)

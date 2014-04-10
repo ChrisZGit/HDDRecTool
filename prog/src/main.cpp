@@ -3,8 +3,7 @@
 #include <cstdlib>
 #include <iostream>
 
-#include <raidSystem.h>
-#include <fileHandler.h>
+#include <raidRecover.h>
 
 int main(int argc, char *argv[])
 {
@@ -27,27 +26,34 @@ int main(int argc, char *argv[])
 	inPath+="/";
 	outPath = argv[2];
 	outPath += "/";
-	int raidVersion = 6;
+	int raidVersion = 6,stripeSize, lostImages;
+	RaidRecover raidR(inPath,outPath);
 	//Raid System was set
-	if (argc > 2)
+	if (argc > 3)
 	{
-		raidVersion = atoi(argv[2]);
+		raidVersion = atoi(argv[3]);
 		if (raidVersion != 0 && raidVersion != 1 && raidVersion != 5)
 		{
 			std::cout << "No useful version was set. Tool is trying to estimate it on it's own." << std::endl;
+		} else
+		{
+			raidR.setRaid(raidVersion);
 		}
 	}
-	//ditt ding wird allen gegeben
-	FileHandler f(inPath, outPath);
-
-	FileReader *tmp = f.getFileReader(0);
-	int count=0;
-	while (tmp->newBlock())
+	if (argc > 4)
 	{
-		++count;
-		std::cout << tmp->getBufferSize() << std::endl;
+		stripeSize = atoi(argv[4]);
+		raidR.setStripeSize(stripeSize);
 	}
-	std::cout << count << std::endl;
+	if (argc > 5)
+	{
+		lostImages = atoi(argv[5]);
+		raidR.setLostImages(lostImages);
+	}
+
+	raidR.run();
+	
+
 	//Raid System was not set
 	//call checkRaidSystem-Class
 	//this should return
