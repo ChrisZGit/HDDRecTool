@@ -1,37 +1,41 @@
 
-#include <stdexcept>
-#include <chrono>
-#include <thread>
-#include <sstream>
 #include <fstream>
+#include <cstdlib>
+#include <iostream>
 
 #include <raidSystem.h>
+#include <fileHandler.h>
 
 int main(int argc, char *argv[])
 {
 	//Check the Parameters
-	if(argc < 5)
-	{
-		std::cout << "Running without Parameters." << std::endl;
-		std::cout << "Maybe try next time './bin/runme [Path to Image] [RaidVersion] [Stripesize] [Number of lost Images]'"
-	}
-	else if(argc < 2)
+	std::string path;
+	if (argc < 2)
 	{
         std::cerr << "Not enough Parameters. Try at least './bin/runme [Path to Image]'" << std::endl;
         return 1;
+	} 
+	else if (argc < 5)
+	{
+		std::cout << "Running without Parameters." << std::endl;
+		std::cout << "Maybe try next time './bin/runme [Path to Image] [RaidVersion] [Stripesize] [Number of lost Images]'" << std::endl;
     }
 
 	//Check the Raid System
+	path=argv[1];
+	path+="/";
 	int raidVersion = 6;
 	//Raid System was set
-	if(argc > 2)
+	if (argc > 2)
 	{
-		raidVersion = argv[3];
-		if(raidVersion != 0 && raidVersion != 1 && raidVersion != 5)
+		raidVersion = atoi(argv[2]);
+		if (raidVersion != 0 && raidVersion != 1 && raidVersion != 5)
 		{
 			std::cout << "No useful version was set. Tool is trying to estimate it on it's own." << std::endl;
 		}
 	}
+	//ditt ding wird allen gegeben
+	FileHandler f(path);
 
 	//Raid System was not set
 	//call checkRaidSystem-Class
