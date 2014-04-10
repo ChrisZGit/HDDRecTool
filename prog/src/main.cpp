@@ -34,11 +34,25 @@ int main(int argc, char *argv[])
 
 	//Raid System was not set
 	//call checkRaidSystem-Class
+	//this should return
+		//it's raid 0, 1 or 5
+		//the stripesize
+		//the stripemap
 
 
+	//Partition is checked
+	//call partitionCheck-Class
+	//this should return
+		//Partition Type
+		//Other Parameters
 
 
-	
+	//Image should be created and lost drives should be recreated
+	//call createImages-Class
+	//this should return if it was successfull
+	//there is also the check, if the images could be restored completely and where the bugs were
+
+
 	return  0;
 }
 
