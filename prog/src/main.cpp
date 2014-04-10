@@ -5,6 +5,7 @@
 #include <sstream>
 #include <fstream>
 
+#include <raidSystem.h>
 
 int main(int argc, char *argv[])
 {
