@@ -1,8 +1,11 @@
 #ifndef RAIDSYSTEM_H
 #define RAIDSYSTEM_H
 
+#define BLOCKSIZE 512
+
 #include <vector>
 #include <iostream>
+#include <cstdlib>
 
 #include <fileHandler.h>
 
@@ -34,6 +37,11 @@ private:
 	int lostImages;
 	std::vector<Pattern> stripePattern;
 
+	//raid1_check easiest, afterwards easyCheck, to check for raid5_complete
+	//intensive_check for rest, to determine raid1 or raid5_corrupt, or too much corrupt
+	//to do anything with it
+	bool checkForNull(char *in, size_t size);
+	bool raid1_check();
 	bool easyCheck();
 	bool intensiveCheck();
 

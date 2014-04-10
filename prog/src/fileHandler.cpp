@@ -22,6 +22,11 @@ FileHandler::FileHandler(std::string inputFolder, std::string outputFolder)
 			inFiles.push_back(a);
 		}
 	}
+	if (inFiles.empty())
+	{
+		std::cerr << "No valid directory or no valid datas in directory" << std::endl;
+		exit(EXIT_FAILURE);
+	}
 }
 
 std::vector<FileReader *> FileHandler::getInFiles()

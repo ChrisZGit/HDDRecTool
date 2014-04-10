@@ -22,6 +22,14 @@ size_t FileReader::getBufferSize()
 	return endOfBuf;
 }
 
+bool FileReader::emptyBlock()
+{
+	for (size_t i = 0; i < endOfBuf; ++i)
+		if (buffer[i] > 0)
+			return false;
+	return true;
+}
+
 bool FileReader::newBlock()
 {
 	if (fs.is_open() && fs.good() && !(fs.eof()))

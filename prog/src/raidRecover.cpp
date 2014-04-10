@@ -9,6 +9,7 @@ RaidRecover::RaidRecover(std::string inPath, std::string outPath)
 {
 	handle = new FileHandler(inPath, outPath);
 	system = new RaidSystem(handle);
+	std::cout << (void *)handle << std::endl;
 }
 
 void RaidRecover::setStripeSize(int i)
@@ -28,6 +29,9 @@ void RaidRecover::setRaid(int i)
 
 void RaidRecover::run()
 {
-	
+	bool found = system->raidCheck();
+	if (found==true)
+		std::cout << "found " << std::endl;
+
 }
 
