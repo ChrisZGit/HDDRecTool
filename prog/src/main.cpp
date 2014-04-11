@@ -23,9 +23,11 @@ int main(int argc, char *argv[])
 
 	//Check the Raid System
 	inPath=argv[1];
-	inPath+="/";
+	if (!(inPath.at(inPath.size()-1) == '/'))
+		inPath+="/";
 	outPath = argv[2];
-	outPath += "/";
+	if (!(outPath.at(outPath.size()-1) == '/'))
+		outPath += "/";
 	int raidVersion = 6,stripeSize, lostImages;
 
 	RaidRecover raidR(inPath,outPath);

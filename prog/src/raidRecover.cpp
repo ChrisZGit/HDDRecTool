@@ -9,7 +9,6 @@ RaidRecover::RaidRecover(std::string inPath, std::string outPath)
 {
 	handle = new FileHandler(inPath, outPath);
 	system = new RaidSystem(handle);
-	std::cout << (void *)handle << std::endl;
 }
 
 void RaidRecover::setStripeSize(int i)
@@ -33,6 +32,6 @@ void RaidRecover::run()
 	if (found==true)
 		std::cout << "found a valid raid version: " << system->getRaid() << std::endl;
 	else
-		std::cout << "Found no valid Raid-version. Recovery aborted." << std:.endl;
+		std::cout << "Found no valid Raid-version. Recovery aborted." << std::endl;
 }
 

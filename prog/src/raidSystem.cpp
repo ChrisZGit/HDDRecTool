@@ -8,7 +8,6 @@ RaidSystem::RaidSystem()
 RaidSystem::RaidSystem(FileHandler *fileHandler)
 {
 	handle = fileHandler;
-	std::cout << (void *)handle << std::endl;
 	raidSystem = Raid_unknown;
 	stripeSize = -1;
 	lostImages = -1;
@@ -53,11 +52,11 @@ bool RaidSystem::checkForNull(char *in, size_t size)
 
 bool RaidSystem::checkForEqual(char *buf, char *in, size_t size)
 {
-	int count = 0;
+	unsigned int count = 0;
 	for (size_t i = 0; i < size; ++i)
 	{
 		if (in[i] != buf[i])
-			count++;
+			++count;
 	}
 	if (count > (size/100))
 		return false;
@@ -67,9 +66,11 @@ bool RaidSystem::checkForEqual(char *buf, char *in, size_t size)
 
 bool RaidSystem::raid1_check()
 {
-	char buf[BUFLENGTH/4];
+	char buf[CHECKSIZE];
+	char *checkAgainstMe;
 	char *in;
-	bool isNull=false;
+	int startAdress = 0;
+	int hits=0, misses=0;
 
 	std::vector<FileReader *> inFiles = handle->getInFiles();
 	if(inFiles.size() < 2)
@@ -83,24 +84,45 @@ bool RaidSystem::raid1_check()
 		for (unsigned int i = 0; i < inFiles.size(); ++i)
 			inFiles.at(i)->newBlock();
 	}
-	for (int j = 0; j < BUFLENGTH/4; ++j)
+	checkAgainstMe = inFiles.at(0)->getBuffer();
+	for (int j = 0; j < CHECKSIZE; ++j)
 	{
 		buf[j] = 0;
 	}
-	for (unsigned int j = 0; j < inFiles.size(); ++j)
+
+	for (int count=0; count < 10; ++count)
 	{
-		in = inFiles.at(j)->getBuffer();
-		for (int x = 0; x < BUFLENGTH/4; ++x)
+		for (int i = 0; i < 100; ++i)
 		{
-			buf[x] = buf[x]^in[x];
+			startAdress = rand() % (inFiles.at(0)->getBufferSize()-CHECKSIZE);
+			for (unsigned int j = 1; j < inFiles.size(); ++j)
+			{
+				in = inFiles.at(j)->getBuffer();
+				for (int x = 0; x < CHECKSIZE; ++x)
+				{
+					buf[x] = checkAgainstMe[x+startAdress]^in[x+startAdress];
+				}
+				if (checkForNull(buf, CHECKSIZE)==false)
+				{
+					++misses;
+				} else
+				{
+					++hits;
+				}
+			}
+		}
+		while (inFiles.at(0)->emptyBlock()==true)
+		{
+			for (unsigned int i = 0; i < inFiles.size(); ++i)
+				inFiles.at(i)->newBlock();
 		}
 	}
-	isNull = checkForNull(buf, BUFLENGTH/4);
-	if (isNull == true)
+	if (hits > misses*10)
 	{
 		raidSystem = Raid1;
+		return true;
 	}
-	return isNull;
+	return false;
 }
 
 bool RaidSystem::easyCheck()
@@ -116,7 +138,7 @@ bool RaidSystem::easyCheck()
 		std::cout << "There are too few Devices for the easy Raid5-check." << std::endl;
 		return false;
 	}
-	
+
 	while (inFiles.at(0)->emptyBlock()==true)
 	{
 		for (unsigned int i = 0; i < inFiles.size(); ++i)
@@ -139,7 +161,6 @@ bool RaidSystem::easyCheck()
 	{
 		raidSystem = Raid5_complete;
 	}
-
 	return isNull;
 }
 

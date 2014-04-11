@@ -4,8 +4,6 @@
 #include <iostream>
 #include <fstream>
 
-#define BUFLENGTH 256*1024*1024
-
 class FileWriter
 {
 private:

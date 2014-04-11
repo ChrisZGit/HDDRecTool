@@ -1,7 +1,7 @@
 #ifndef RAIDSYSTEM_H
 #define RAIDSYSTEM_H
 
-#define BLOCKSIZE 512
+#define CHECKSIZE 512
 
 #include <vector>
 #include <iostream>
@@ -11,11 +11,11 @@
 
 enum Raid
 {
-	Raid0,
-	Raid1,
-	Raid5,	//this one is only set by user
-	Raid5_corrupt,
-	Raid5_complete,
+	Raid0=0,
+	Raid1=1,
+	Raid5=5,	//this one is only set by user
+	Raid5_corrupt=5,
+	Raid5_complete=5,
 	Raid_unknown
 };
 
