@@ -12,7 +12,10 @@ private:
 
 public:
 	FileWriter();
-	FileWriter(std::string path){outPath = path;}
+	FileWriter(std::string path);
+	~FileWriter();
+
+	bool writeToFile(char *buf, size_t size);
 
 };
 
