@@ -17,6 +17,7 @@ private:
 	std::string inFolder;
 	std::string outFolder;
 	std::vector<FileReader*> inFiles;
+	FileWriter *writer;
 
 public:
 	FileHandler();
@@ -24,6 +25,7 @@ public:
 
 	std::vector<FileReader*> getInFiles();
 	FileReader *getFileReader(size_t num);
+	FileWriter *getFileWriter();
 };
 
 #endif

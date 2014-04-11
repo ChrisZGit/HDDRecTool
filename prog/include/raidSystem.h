@@ -55,6 +55,7 @@ public:
 	Raid getRaid();
 	size_t getStripeSize();
 	std::vector<Pattern> getPattern();
+	bool recoverLostImage();
 
 	void setStripeSize(int i);
 	void setRaid(int i);

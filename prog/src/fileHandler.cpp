@@ -27,6 +27,7 @@ FileHandler::FileHandler(std::string inputFolder, std::string outputFolder)
 		std::cerr << "No valid directory or no valid datas in directory" << std::endl;
 		exit(EXIT_FAILURE);
 	}
+	writer = new FileWriter(outFolder+"recoveredImage.dd");
 }
 
 std::vector<FileReader *> FileHandler::getInFiles()
@@ -43,4 +44,10 @@ FileReader * FileHandler::getFileReader(size_t num)
 	}
 	return inFiles.at(num);
 }
+
+FileWriter *FileHandler::getFileWriter()
+{
+	return writer;
+}
+
 

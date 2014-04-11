@@ -111,11 +111,15 @@ bool RaidSystem::raid1_check()
 				}
 			}
 		}
-		while (inFiles.at(0)->emptyBlock()==true)
+		do
 		{
-			for (unsigned int i = 0; i < inFiles.size(); ++i)
-				inFiles.at(i)->newBlock();
-		}
+			unsigned int randomNum = rand()%10;
+			for (unsigned int i = 0; i < randomNum; ++i)
+			{
+				for (unsigned int j = 0; j < inFiles.size(); ++j)
+					inFiles.at(j)->newBlock();
+			}
+		} while (inFiles.at(0)->emptyBlock()==true);
 	}
 	if (hits > misses*10)
 	{
@@ -127,10 +131,11 @@ bool RaidSystem::raid1_check()
 
 bool RaidSystem::easyCheck()
 {
-	//Here the easy raid5-check is implemented
-	char buf[BUFLENGTH/4];
+	char buf[CHECKSIZE];
+	char *checkAgainstMe;
 	char *in;
-	bool isNull=false;
+	int startAdress = 0;
+	int hits=0, misses=0;
 
 	std::vector<FileReader *> inFiles = handle->getInFiles();
 	if(inFiles.size() < 3)
@@ -138,30 +143,86 @@ bool RaidSystem::easyCheck()
 		std::cout << "There are too few Devices for the easy Raid5-check." << std::endl;
 		return false;
 	}
-
+		
 	while (inFiles.at(0)->emptyBlock()==true)
 	{
 		for (unsigned int i = 0; i < inFiles.size(); ++i)
 			inFiles.at(i)->newBlock();
 	}
-	for (int j = 0; j < BUFLENGTH/4; ++j)
+	checkAgainstMe = inFiles.at(0)->getBuffer();
+
+	for (int count=0; count < 10; ++count)
 	{
-		buf[j] = 0;
-	}
-	for (unsigned int j = 0; j < inFiles.size(); ++j)
-	{
-		in = inFiles.at(j)->getBuffer();
-		for (int x = 0; x < BUFLENGTH/4; ++x)
+		for (int i = 0; i < 100; ++i)
 		{
-			buf[x] = buf[x]^in[x];
+			startAdress = rand() % (inFiles.at(0)->getBufferSize()-CHECKSIZE);
+			for (int j = 0; j < CHECKSIZE; ++j)
+			{
+				buf[j] = 0;
+			}
+			for (unsigned int j = 1; j < inFiles.size(); ++j)
+			{
+				in = inFiles.at(j)->getBuffer();
+				for (int x = 0; x < CHECKSIZE; ++x)
+				{
+					buf[x] = buf[x]^in[x+startAdress];
+				}
+			}
+			if (checkForEqual(buf, checkAgainstMe+startAdress, CHECKSIZE)==false)
+			{
+				++misses;
+			} else
+			{
+				++hits;
+			}
 		}
+		do
+		{
+			unsigned int randomNum = rand()%10;
+			for (unsigned int i = 0; i < randomNum; ++i)
+			{
+				for (unsigned int j = 0; j < inFiles.size(); ++j)
+					inFiles.at(j)->newBlock();
+			}
+		} while (inFiles.at(0)->emptyBlock()==true);
 	}
-	isNull = checkForEqual(buf, in, BUFLENGTH/4);
-	if (isNull == true)
+	if (hits > misses*10)
 	{
 		raidSystem = Raid5_complete;
+		return true;
 	}
-	return isNull;
+	return false;
+}
+
+bool RaidSystem::recoverLostImage()
+{
+	if (lostImages == 0)
+	{
+		std::cout << "No lost Images to recover" << std::endl;
+		return true;
+	} else if (lostImages > 1)
+	{
+		std::cerr << "Too many lost Images to recover" << std::endl;
+		return false;
+	}
+	char buf[BUFLENGTH];
+	std::vector<FileReader *> inFiles = handle->getInFiles();
+	for (unsigned int j = 0; j < inFiles.size(); ++j)
+		inFiles.at(j)->reset();
+	while (inFiles.at(0)->getBufferSize() > 0)
+	{
+		for (int i = 0; i < BUFLENGTH; ++i)
+		{
+			for (size_t j = 0; j < inFiles.size(); ++j)
+			{
+				buf[i] = buf[i]^inFiles.at(j)->getBuffer()[i];
+			}
+		}
+		handle->getFileWriter()->writeToFile(buf,BUFLENGTH);
+		for (unsigned int j = 0; j < inFiles.size(); ++j)
+			inFiles.at(j)->newBlock();
+	}
+	return true;
 }
 
 bool RaidSystem::intensiveCheck()

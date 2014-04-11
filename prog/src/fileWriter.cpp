@@ -2,12 +2,7 @@
 
 FileWriter::FileWriter(std::string path)
 {
-	outPath = outputPath;
-	fs.open(outPath.c_str(), std::fstream::out);
-	if (fs == NULL)
-	{
-		std::cerr << "ERROR FileReader::FileReader - Couldnt open file: " << outPath << std::endl;
-	}
+	outPath = path;
 }
 
 FileWriter::~FileWriter()
@@ -17,9 +12,20 @@ FileWriter::~FileWriter()
 
 bool FileWriter::writeToFile(char *buf, size_t size)
 {
+	static bool init=true;
+	if (init == true)
+	{
+		fs.open(outPath.c_str(), std::fstream::out);
+		if (fs == NULL)
+		{
+			std::cerr << "ERROR FileReader::FileReader - Couldnt open file: " << outPath << std::endl;
+		}
+		init = false;
+	}
 	if(fs.is_open() && fs.good())
-	(
+	{
 		fs.write(buf, size);
-	)
+	}
+	return true;
 }
 
