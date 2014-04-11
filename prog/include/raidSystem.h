@@ -42,8 +42,8 @@ private:
 	//to do anything with it
 	bool checkForNull(char *in, size_t size);
 	bool checkForEqual(char *buf, char *in, size_t size);
-	bool raid1_check();
-	bool easyCheck();
+	bool checkIfRaid1();
+	bool checkIfRaid5();
 	bool intensiveCheck();
 
 public:

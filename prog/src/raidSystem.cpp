@@ -64,7 +64,7 @@ bool RaidSystem::checkForEqual(char *buf, char *in, size_t size)
 	return true;
 }
 
-bool RaidSystem::raid1_check()
+bool RaidSystem::checkIfRaid1()
 {
 	char buf[CHECKSIZE];
 	char *checkAgainstMe;
@@ -90,9 +90,9 @@ bool RaidSystem::raid1_check()
 		buf[j] = 0;
 	}
 
-	for (int count=0; count < 10; ++count)
+	for (int count=0; count < 5; ++count)
 	{
-		for (int i = 0; i < 100; ++i)
+		for (int i = 0; i < 20; ++i)
 		{
 			startAdress = rand() % (inFiles.at(0)->getBufferSize()-CHECKSIZE);
 			for (unsigned int j = 1; j < inFiles.size(); ++j)
@@ -113,14 +113,25 @@ bool RaidSystem::raid1_check()
 		}
 		do
 		{
-			unsigned int randomNum = rand()%10;
-			for (unsigned int i = 0; i < randomNum; ++i)
+			for (unsigned int j = 0; j < inFiles.size(); ++j)
 			{
-				for (unsigned int j = 0; j < inFiles.size(); ++j)
-					inFiles.at(j)->newBlock();
+				if (inFiles.at(j)->newBlock() == false)
+				{
+					std::cerr << "Too few written blocks to test perfectly, heuristic choice done." << std::endl;
+					for (unsigned int x = 0; x < inFiles.size(); ++x)
+						inFiles.at(x)->reset();
+					if (hits > misses*10)
+					{
+						raidSystem = Raid1;
+						return true;
+					}
+					return false;
+				}
 			}
 		} while (inFiles.at(0)->emptyBlock()==true);
 	}
+	for (unsigned int j = 0; j < inFiles.size(); ++j)
+		inFiles.at(j)->reset();
 	if (hits > misses*10)
 	{
 		raidSystem = Raid1;
@@ -129,7 +140,7 @@ bool RaidSystem::raid1_check()
 	return false;
 }
 
-bool RaidSystem::easyCheck()
+bool RaidSystem::checkIfRaid5()
 {
 	char buf[CHECKSIZE];
 	char *checkAgainstMe;
@@ -143,7 +154,7 @@ bool RaidSystem::easyCheck()
 		std::cout << "There are too few Devices for the easy Raid5-check." << std::endl;
 		return false;
 	}
-		
+
 	while (inFiles.at(0)->emptyBlock()==true)
 	{
 		for (unsigned int i = 0; i < inFiles.size(); ++i)
@@ -151,9 +162,9 @@ bool RaidSystem::easyCheck()
 	}
 	checkAgainstMe = inFiles.at(0)->getBuffer();
 
-	for (int count=0; count < 10; ++count)
+	for (int count=0; count < 5; ++count)
 	{
-		for (int i = 0; i < 100; ++i)
+		for (int i = 0; i < 20; ++i)
 		{
 			startAdress = rand() % (inFiles.at(0)->getBufferSize()-CHECKSIZE);
 			for (int j = 0; j < CHECKSIZE; ++j)
@@ -178,14 +189,25 @@ bool RaidSystem::easyCheck()
 		}
 		do
 		{
-			unsigned int randomNum = rand()%10;
-			for (unsigned int i = 0; i < randomNum; ++i)
+			for (unsigned int j = 0; j < inFiles.size(); ++j)
 			{
-				for (unsigned int j = 0; j < inFiles.size(); ++j)
-					inFiles.at(j)->newBlock();
+				if (inFiles.at(j)->newBlock() == false)
+				{
+					std::cerr << "Too few written blocks to test perfectly, heuristic choice done." << std::endl;
+					for (unsigned int x = 0; x < inFiles.size(); ++x)
+						inFiles.at(x)->reset();
+					if (hits > misses*10)
+					{
+						raidSystem = Raid5_complete;
+						return true;
+					}
+					return false;
+				}
 			}
 		} while (inFiles.at(0)->emptyBlock()==true);
 	}
+	for (unsigned int j = 0; j < inFiles.size(); ++j)
+		inFiles.at(j)->reset();
 	if (hits > misses*10)
 	{
 		raidSystem = Raid5_complete;
@@ -235,15 +257,16 @@ bool RaidSystem::raidCheck()
 	bool found = false;
 	if (raidSystem == Raid_unknown)
 	{
-		found = raid1_check();
+		std::cout << "Starting with check for complete raid5" << std::endl;
+		found = checkIfRaid5();
 		if (found == false)
 		{
-			std::cout << "Easy check on raid1 failed. Now begins the test on the Raid5 easy check." << std::endl;
-			found = easyCheck();
+			std::cout << "FAILED!\n Check against raid1." << std::endl;
+			found = checkIfRaid1();
 		}
 		if (found == false)
 		{
-			std::cout << "Two easy checks failed. Now the intensive check to estimate the raid version begins." << std::endl;
+			std::cout << "FAILED!\n Now the intensive check to estimate the raid version begins." << std::endl;
 			found = intensiveCheck();
 		}
 	}

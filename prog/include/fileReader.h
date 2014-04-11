@@ -4,13 +4,13 @@
 #include <iostream>
 #include <fstream>
 
-#define BUFLENGTH 16*1024
+#define BUFLENGTH 16*1024*1024
 
 class FileReader
 {
 private:
 	std::ifstream fs;
-	char buffer[BUFLENGTH];
+	char *buffer;
 	size_t endOfBuf;
 	std::string path;
 

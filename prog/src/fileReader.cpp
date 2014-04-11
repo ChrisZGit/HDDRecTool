@@ -4,6 +4,7 @@ FileReader::FileReader(std::string inPath)
 {
 	path=inPath;
 	fs.open(path.c_str(), std::fstream::in);
+	buffer = new char[BUFLENGTH];
 	if (fs==NULL)
 	{
 		std::cerr << "ERROR FileReader::FileReader - Couldnt open file: " << path << std::endl;
