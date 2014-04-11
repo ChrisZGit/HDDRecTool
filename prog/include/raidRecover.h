@@ -14,13 +14,13 @@ class RaidRecover
 
 	public:
 		RaidRecover();
-		RaidRecover(std::string inPath, std::string outPath);
+		RaidRecover(std::string inPath, std::string outPath); //this should get a FileHandler....not make a new one
 
 		void setStripeSize(int i);
 		void setLostImages(int i);
 		void setRaid(int i);
 
-		void run();
+		void run(); //this calls the raid-check
 };
 
 #endif

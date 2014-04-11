@@ -12,14 +12,14 @@ int main(int argc, char *argv[])
 	std::string outPath;
 	if (argc < 3)
 	{
-        std::cerr << "Not enough Parameters. Try at least './bin/runme [Path to Image] [Path to Output-Folder]'" << std::endl;
-        return 1;
+		std::cerr << "Not enough Parameters. Try at least './bin/runme [Path to Image] [Path to Output-Folder]'" << std::endl;
+		return 1;
 	} 
 	else if (argc < 6)
 	{
 		std::cout << "Running without Parameters." << std::endl;
 		std::cout << "Maybe try next time './bin/runme [Path to Image] [Path to Output-Folder] [RaidVersion] [Stripesize] [Number of lost Images]'" << std::endl;
-    }
+	}
 
 	//Check the Raid System
 	inPath=argv[1];
@@ -27,6 +27,7 @@ int main(int argc, char *argv[])
 	outPath = argv[2];
 	outPath += "/";
 	int raidVersion = 6,stripeSize, lostImages;
+
 	RaidRecover raidR(inPath,outPath);
 	//Raid System was set
 	if (argc > 3)
@@ -40,27 +41,23 @@ int main(int argc, char *argv[])
 			raidR.setRaid(raidVersion);
 		}
 	}
+	//Stripesize was set
 	if (argc > 4)
 	{
 		stripeSize = atoi(argv[4]);
 		raidR.setStripeSize(stripeSize);
 	}
+
+	//Number of lost Images was set
 	if (argc > 5)
 	{
 		lostImages = atoi(argv[5]);
 		raidR.setLostImages(lostImages);
 	}
 
+	//Call the Raid Recovery
 	raidR.run();
 	
-
-	//Raid System was not set
-	//call checkRaidSystem-Class
-	//this should return
-		//it's raid 0, 1 or 5
-		//the stripesize
-		//the stripemap
-
 
 	//Partition is checked
 	//call partitionCheck-Class

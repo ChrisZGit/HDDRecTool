@@ -41,6 +41,7 @@ private:
 	//intensive_check for rest, to determine raid1 or raid5_corrupt, or too much corrupt
 	//to do anything with it
 	bool checkForNull(char *in, size_t size);
+	bool checkForEqual(char *buf, char *in, size_t size);
 	bool raid1_check();
 	bool easyCheck();
 	bool intensiveCheck();

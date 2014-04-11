@@ -9,7 +9,7 @@
 #include <string.h>
 
 #include <fileReader.h>
-//#include <fileWriter.h>
+#include <fileWriter.h>
 
 class FileHandler
 {

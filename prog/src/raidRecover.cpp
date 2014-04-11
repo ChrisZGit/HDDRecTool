@@ -31,7 +31,8 @@ void RaidRecover::run()
 {
 	bool found = system->raidCheck();
 	if (found==true)
-		std::cout << "found " << std::endl;
-
+		std::cout << "found a valid raid version: " << system->getRaid() << std::endl;
+	else
+		std::cout << "Found no valid Raid-version. Recovery aborted." << std:.endl;
 }
 
