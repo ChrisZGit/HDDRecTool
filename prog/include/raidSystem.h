@@ -47,6 +47,8 @@ private:
 	bool checkIfRaid5();
 	bool intensiveCheck();
 
+	bool calculateStripeSize();
+
 public:
 	RaidSystem();
 	RaidSystem(FileHandler *fileHandler);

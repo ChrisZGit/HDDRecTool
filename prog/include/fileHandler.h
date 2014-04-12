@@ -24,6 +24,8 @@ public:
 	FileHandler();
 	FileHandler(std::string inputFolder, std::string outputFolder);
 
+	void reset();
+	int findString(std::string seek);
 	bool findGoodBlock();
 
 	std::vector<FileReader*> getInFiles();

@@ -125,6 +125,48 @@ bool FileHandler::findGoodBlock()
 	return true;
 }
 
+void FileHandler::reset()
+{
+	for (unsigned int i = 0; i < inFiles.size(); ++i)
+	{
+		inFiles.at(i)->reset();
+	}
+}
+
+int FileHandler::findString(std::string seek)
+{
+	reset();
+	int found = -1;
+	bool eof=true;
+	while (found == -1)
+	{
+		for (unsigned int i = 0; i < inFiles.size(); ++i)
+		{
+			found = inFiles.at(i)->findFirstNonemptyBlock();
+			if (found == -1)
+			{
+				eof=inFiles.at(i)->reloadBuffer();
+			} else
+			{
+				inFiles.at(i)->setOffset(found);
+				found = inFiles.at(i)->findString(seek);
+				if (found != -1)
+				{
+					break;
+				}
+				if (inFiles.at(i)->newBlock() == false)
+				{
+					eof=inFiles.at(i)->reloadBuffer();
+				}
+			}
+			if (eof==false)
+				return -1;
+		}
+	}
+	
+	return 0;
+}
+
 std::vector<FileReader *> FileHandler::getInFiles()
 {
 	return inFiles;

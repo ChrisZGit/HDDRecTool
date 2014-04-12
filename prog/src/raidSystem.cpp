@@ -140,13 +140,12 @@ bool RaidSystem::easyCheck()
 		}
 	}
 	std::cout << raid1 << " " << raid5 << " " << misses << std::endl;
-	for (unsigned int j = 0; j < inFiles.size(); ++j)
-		inFiles.at(j)->reset();
-	if (raid1 > (misses+raid5)*2)
+	handle->reset();
+	if (raid1 > (misses+raid5)*1.5)
 	{
 		raidSystem = Raid1;
 		return true;
-	} else if (raid5 > (misses+raid1)*2)
+	} else if (raid5 > (misses+raid1)*1.5)
 	{
 		raidSystem = Raid5_complete;
 		return true;
@@ -220,13 +219,23 @@ bool RaidSystem::checkIfRaid5()
 			}
 		} while (inFiles.at(0)->emptyBlock()==true);
 	}
-	for (unsigned int j = 0; j < inFiles.size(); ++j)
-		inFiles.at(j)->reset();
+	handle->reset();
 	if (hits > misses*10)
 	{
 		raidSystem = Raid5_complete;
 		return true;
 	}
+	return false;
+}
+
+bool RaidSystem::intensiveCheck()
+{
+	return false;
+}
+
+bool RaidSystem::calculateStripeSize()
+{
+	int adress = handle->findString("Win");
 	return false;
 }
 
@@ -259,11 +268,6 @@ bool RaidSystem::recoverLostImage()
 			inFiles.at(j)->newBlock();
 	}
 	return true;
-}
-
-bool RaidSystem::intensiveCheck()
-{
-	return false;
 }
 
 bool RaidSystem::raidCheck()
@@ -321,6 +325,7 @@ bool RaidSystem::raidCheck()
 		}
 		found = true;
 	}
+	calculateStripeSize();
 	return found;
 }
 

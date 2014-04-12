@@ -6,12 +6,15 @@
 
 #include <defines.h>
 
+//TODO: get - offset, get - globalAdress
+
 class FileReader
 {
 private:
 	std::ifstream fs;
 	char *loadBuffer;
 	char *block;
+	size_t globalAdress;
 	size_t endOfBuf;
 	int offset;
 	size_t bufferLength;
@@ -25,7 +28,10 @@ public:
 	char *getBuffer();
 	size_t getBufferSize();
 	bool emptyBlock();
+
+	bool endOfImage();
 	
+	int findString(std::string seek);
 	bool skipInputBuffer(int NumOfBuffers);
 	void setBlockSize(size_t blockS);
 	void setOffset(size_t in);

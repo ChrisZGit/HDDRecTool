@@ -12,8 +12,9 @@ FileReader::FileReader(std::string inPath, size_t size)
 	}
 	endOfBuf = 0;
 	blockSize = BLOCKSIZE;
+	reloadBuffer();
+	globalAdress = 0;
 	offset = 0;
-	newBlock();
 }
 
 char *FileReader::getBuffer()
@@ -55,6 +56,21 @@ int FileReader::findFirstNonemptyBlock()
 	return -1;
 }
 
+int FileReader::findString(std::string seek)
+{
+	std::string tmp;
+	tmp.assign(block, blockSize);
+	unsigned int ret = tmp.find(seek);
+	if (ret == std::string::npos)
+	{
+		return -1;
+	}
+	std::cout << std::hex << globalAdress << " " << offset << " " << ret << std::endl;
+	std::cout << std::hex << globalAdress + offset + ret<< std::endl;
+	std::cout << std::dec << tmp << std::endl;
+	return (int)ret;
+}
+
 bool FileReader::skipInputBuffer(int NumOfBuffers)
 {
 	std::cout << "Skipping buffer for " << path << std::endl;
@@ -84,12 +100,14 @@ bool FileReader::reloadBuffer()
 	{
 		endOfBuf = fs.readsome(loadBuffer, bufferLength);
 		offset = 0;
+		globalAdress += bufferLength;
 	} 
 	if (fs.bad() || endOfBuf==0 || fs.eof())
 	{
 		std::cerr << "End of File reached" << std::endl;
 		return false;
 	}
+	block = loadBuffer;
 	return true;
 }
 
@@ -101,6 +119,7 @@ bool FileReader::newBlock()
 		offset -= blockSize;
 		return false;
 	}
+	block = &loadBuffer[offset];
 	return true;
 	/*
 	if (fs.is_open() && fs.good() && !(fs.eof()))
@@ -120,5 +139,7 @@ void FileReader::reset()
 {
 	if (fs.good())
 		fs.seekg(0);
+	reloadBuffer();
+	globalAdress=0;
 }
 
