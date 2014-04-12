@@ -27,19 +27,19 @@ pathmaker:
 exe: pathmaker $(objects) $(MAIN)
 	$(CC) $(OPT) $(INC) $(LIBS) -o $(BINPATH)runme $(objects) $(MAIN)
 
-$(OBJPATH)raidSystem.o: $(INCPATH)raidSystem.h $(SRCPATH)raidSystem.cpp
+$(OBJPATH)raidSystem.o: $(INCPATH)defines.h $(INCPATH)raidSystem.h $(SRCPATH)raidSystem.cpp
 	$(CC) $(OPT) $(INC) $(LIBS) -c -o $(OBJPATH)raidSystem.o $(SRCPATH)raidSystem.cpp
 
-$(OBJPATH)fileReader.o: $(INCPATH)fileReader.h $(SRCPATH)fileReader.cpp
+$(OBJPATH)fileReader.o: $(INCPATH)defines.h $(INCPATH)fileReader.h $(SRCPATH)fileReader.cpp
 	$(CC) $(OPT) $(INC) $(LIBS) -c -o $(OBJPATH)fileReader.o $(SRCPATH)fileReader.cpp
 
-$(OBJPATH)fileHandler.o: $(INCPATH)fileHandler.h $(SRCPATH)fileHandler.cpp
+$(OBJPATH)fileHandler.o: $(INCPATH)defines.h $(INCPATH)fileHandler.h $(SRCPATH)fileHandler.cpp
 	$(CC) $(OPT) $(INC) $(LIBS) -c -o $(OBJPATH)fileHandler.o $(SRCPATH)fileHandler.cpp
 
-$(OBJPATH)fileWriter.o: $(INCPATH)fileWriter.h $(SRCPATH)fileWriter.cpp
+$(OBJPATH)fileWriter.o: $(INCPATH)defines.h $(INCPATH)fileWriter.h $(SRCPATH)fileWriter.cpp
 	$(CC) $(OPT) $(INC) $(LIBS) -c -o $(OBJPATH)fileWriter.o $(SRCPATH)fileWriter.cpp
 
-$(OBJPATH)raidRecover.o: $(INCPATH)raidRecover.h $(SRCPATH)raidRecover.cpp
+$(OBJPATH)raidRecover.o: $(INCPATH)defines.h $(INCPATH)raidRecover.h $(SRCPATH)raidRecover.cpp
 	$(CC) $(OPT) $(INC) $(LIBS) -c -o $(OBJPATH)raidRecover.o $(SRCPATH)raidRecover.cpp
 
 clean:

@@ -8,6 +8,8 @@ FileHandler::FileHandler(std::string inputFolder, std::string outputFolder)
 	DIR *dpdf;
 	struct dirent *epdf;
 
+	std::vector<std::string> imgs;
+
 	dpdf = opendir(inputFolder.c_str());
 	if (dpdf != NULL)
 	{
@@ -17,17 +19,110 @@ FileHandler::FileHandler(std::string inputFolder, std::string outputFolder)
 				continue;
 			std::string tmp = inputFolder+epdf->d_name;
 			std::cout << tmp << std::endl;
-
-			FileReader *a = new FileReader(tmp);
-			inFiles.push_back(a);
+			
+			imgs.push_back(tmp);
 		}
 	}
-	if (inFiles.empty())
+	if (imgs.empty())
 	{
 		std::cerr << "No valid directory or no valid datas in directory" << std::endl;
 		exit(EXIT_FAILURE);
 	}
+	int maxSize = (BUFLENGTH/(imgs.size()+1))*2;
+	maxSize = maxSize/BLOCKSIZE;
+	maxSize = maxSize*BLOCKSIZE;
+	maxSize = std::min(maxSize,64*1024*1024);
+	for (unsigned int i = 0; i < imgs.size(); ++i)
+	{
+		FileReader *a = new FileReader(imgs.at(i),maxSize);
+		inFiles.push_back(a);
+	}
 	writer = new FileWriter(outFolder+"recoveredImage.dd");
+}
+
+bool FileHandler::findGoodBlock()
+{
+	size_t offset = 0;
+
+	int erg = -1;
+	int sample=-1;
+	bool found=false;
+	static bool init=true;
+	if (init == false)
+	{
+		for (size_t i = 0; i < inFiles.size(); ++i)
+		{
+			if (inFiles.at(i)->newBlock() == false)
+			{
+				for (unsigned int j = 0; j < inFiles.size(); ++j)
+				{
+					if (inFiles.at(j)->reloadBuffer() == false)
+					{
+						std::cout << "Couldnt find any good Blocks anymore. File end reached." << std::endl;
+						return false;
+					}	
+				}
+			}
+		} 
+	} else
+	{
+		init = false;
+	}
+	while (found == false)
+	{
+		int newBlocks=0;
+		while ((sample = inFiles.at(0)->findFirstNonemptyBlock())==-1)
+		{
+			if (inFiles.at(0)->reloadBuffer() == false)
+			{
+				std::cout << "Couldn't load any good Blocks anymore. Good luck!" << std::endl;
+				return false;
+			}
+			++newBlocks;
+		}
+		if (newBlocks > 0)
+		{
+			for (size_t i = 1; i < inFiles.size(); ++i)
+			{
+				inFiles.at(i)->skipInputBuffer(newBlocks);
+			}
+		}
+		for (size_t i = 1; i < inFiles.size(); ++i)
+		{
+			erg = inFiles.at(i)->findFirstNonemptyBlock();
+			if (erg == -1)
+			{
+				break;
+			}
+			erg = std::max(sample, erg);
+		}
+		if (erg == -1 || sample == -1)
+		{
+			for (size_t i = 0; i < inFiles.size(); ++i)
+			{
+				if (inFiles.at(i)->reloadBuffer() == false)
+				{
+					std::cout << "Couldnt find any good Blocks anymore. File end reached." << std::endl;
+					return false;
+				}
+			}
+			continue;
+		}
+		if (erg == sample)
+		{
+			offset = erg;
+			break;
+		}
+		for (size_t i = 0; i < inFiles.size(); ++i)
+		{
+			inFiles.at(i)->setOffset(erg);
+		}
+	}
+	for (size_t i = 0; i < inFiles.size(); ++i)
+	{
+		inFiles.at(i)->setOffset(offset);
+	}
+	return true;
 }
 
 std::vector<FileReader *> FileHandler::getInFiles()

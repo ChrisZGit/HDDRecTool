@@ -1,13 +1,14 @@
 #ifndef RAIDSYSTEM_H
 #define RAIDSYSTEM_H
 
-#define CHECKSIZE 512
-
 #include <vector>
 #include <iostream>
 #include <cstdlib>
 
 #include <fileHandler.h>
+#include <defines.h>
+
+#define CHECKSIZE 512
 
 enum Raid
 {

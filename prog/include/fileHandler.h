@@ -9,6 +9,7 @@
 #include <string.h>
 
 #include <fileReader.h>
+#include <defines.h>
 #include <fileWriter.h>
 
 class FileHandler
@@ -22,6 +23,8 @@ private:
 public:
 	FileHandler();
 	FileHandler(std::string inputFolder, std::string outputFolder);
+
+	bool findGoodBlock();
 
 	std::vector<FileReader*> getInFiles();
 	FileReader *getFileReader(size_t num);

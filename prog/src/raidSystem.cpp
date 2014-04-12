@@ -78,25 +78,25 @@ bool RaidSystem::checkIfRaid1()
 		std::cout << "There are too few devices given for an easy Raid1-check." << std::endl;
 		return false;
 	}
-		
-	while (inFiles.at(0)->emptyBlock()==true)
+	if (handle->findGoodBlock() == false)
 	{
-		for (unsigned int i = 0; i < inFiles.size(); ++i)
-			inFiles.at(i)->newBlock();
+		std::cerr << "No valid readable block found! Image too broken" << std::endl;
+		return false;
 	}
-	checkAgainstMe = inFiles.at(0)->getBuffer();
+
 	for (int j = 0; j < CHECKSIZE; ++j)
 	{
 		buf[j] = 0;
 	}
 
-	for (int count=0; count < 5; ++count)
+	for (int count=0; count < 500; ++count)
 	{
-		for (int i = 0; i < 20; ++i)
+		for (int i = 0; i < 10; ++i)
 		{
 			startAdress = rand() % (inFiles.at(0)->getBufferSize()-CHECKSIZE);
 			for (unsigned int j = 1; j < inFiles.size(); ++j)
 			{
+				checkAgainstMe = inFiles.at(0)->getBuffer();
 				in = inFiles.at(j)->getBuffer();
 				for (int x = 0; x < CHECKSIZE; ++x)
 				{
@@ -105,31 +105,31 @@ bool RaidSystem::checkIfRaid1()
 				if (checkForNull(buf, CHECKSIZE)==false)
 				{
 					++misses;
+					for (int x = 0; x < CHECKSIZE; ++x)
+					{
+						buf[x] = 0;
+					}
 				} else
 				{
 					++hits;
 				}
 			}
 		}
-		do
+		if (handle->findGoodBlock() == false)
 		{
-			for (unsigned int j = 0; j < inFiles.size(); ++j)
+			std::cout << "Couldnt test enough blocks. heuristic guess takes place." << std::endl;
+			std::cout << std::dec << hits << " " << misses << std::endl;
+			for (unsigned int x = 0; x < inFiles.size(); ++x)
+				inFiles.at(x)->reset();
+			if (hits > misses*10)
 			{
-				if (inFiles.at(j)->newBlock() == false)
-				{
-					std::cerr << "Too few written blocks to test perfectly, heuristic choice done." << std::endl;
-					for (unsigned int x = 0; x < inFiles.size(); ++x)
-						inFiles.at(x)->reset();
-					if (hits > misses*10)
-					{
-						raidSystem = Raid1;
-						return true;
-					}
-					return false;
-				}
+				raidSystem = Raid1;
+				return true;
 			}
-		} while (inFiles.at(0)->emptyBlock()==true);
+			return false;
+		}
 	}
+	std::cout << std::dec << hits << " " << misses << std::endl;
 	for (unsigned int j = 0; j < inFiles.size(); ++j)
 		inFiles.at(j)->reset();
 	if (hits > misses*10)
@@ -258,7 +258,7 @@ bool RaidSystem::raidCheck()
 	if (raidSystem == Raid_unknown)
 	{
 		std::cout << "Starting with check for complete raid5" << std::endl;
-		found = checkIfRaid5();
+		//found = checkIfRaid5();
 		if (found == false)
 		{
 			std::cout << "FAILED!\n Check against raid1." << std::endl;
