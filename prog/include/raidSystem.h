@@ -14,7 +14,7 @@ enum Raid
 {
 	Raid0=0,
 	Raid1=1,
-	Raid5=5,	//this one is only set by user
+	Raid5_user=5,	//this one is only set by user
 	Raid5_corrupt=5,
 	Raid5_complete=5,
 	Raid_unknown
@@ -43,7 +43,7 @@ private:
 	//to do anything with it
 	bool checkForNull(char *in, size_t size);
 	bool checkForEqual(char *buf, char *in, size_t size);
-	bool checkIfRaid1();
+	bool easyCheck();
 	bool checkIfRaid5();
 	bool intensiveCheck();
 

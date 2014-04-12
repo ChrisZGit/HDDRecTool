@@ -33,7 +33,5 @@ void RaidRecover::run()
 		std::cout << "found a valid raid version: " << system->getRaid() << std::endl;
 	else
 		std::cout << "Found no valid Raid-version. Recovery aborted." << std::endl;
-	//system->setLostImages(1);
-	//system->recoverLostImage();
 }
 

@@ -32,7 +32,7 @@ void RaidSystem::setRaid(int i)
 	if (i == 1)
 		raidSystem = Raid1;
 	if (i == 5)
-		raidSystem = Raid5;
+		raidSystem = Raid5_user;
 }
 
 void RaidSystem::setLostImages(int i)
@@ -64,13 +64,14 @@ bool RaidSystem::checkForEqual(char *buf, char *in, size_t size)
 	return true;
 }
 
-bool RaidSystem::checkIfRaid1()
+bool RaidSystem::easyCheck()
 {
-	char buf[CHECKSIZE];
+	char buf1[CHECKSIZE];
+	char buf5[CHECKSIZE];
 	char *checkAgainstMe;
 	char *in;
 	int startAdress = 0;
-	int hits=0, misses=0;
+	int raid1=0, raid5=0, misses=0;
 
 	std::vector<FileReader *> inFiles = handle->getInFiles();
 	if(inFiles.size() < 2)
@@ -86,55 +87,68 @@ bool RaidSystem::checkIfRaid1()
 
 	for (int j = 0; j < CHECKSIZE; ++j)
 	{
-		buf[j] = 0;
+		buf1[j] = 0;
 	}
 
 	for (int count=0; count < 500; ++count)
 	{
-		for (int i = 0; i < 10; ++i)
+		for (int i = 0; i < 20; ++i)
 		{
+			checkAgainstMe = inFiles.at(0)->getBuffer();
 			startAdress = rand() % (inFiles.at(0)->getBufferSize()-CHECKSIZE);
+			int raid1_miss = 0;
+			int raid1_hit = 0;
+	for (int j = 0; j < CHECKSIZE; ++j)
+	{
+		buf5[j] = 0;
+	}
 			for (unsigned int j = 1; j < inFiles.size(); ++j)
 			{
-				checkAgainstMe = inFiles.at(0)->getBuffer();
 				in = inFiles.at(j)->getBuffer();
 				for (int x = 0; x < CHECKSIZE; ++x)
 				{
-					buf[x] = checkAgainstMe[x+startAdress]^in[x+startAdress];
+					buf1[x] = checkAgainstMe[x+startAdress]^in[x+startAdress];
+					buf5[x] = buf5[x]^in[x+startAdress];
 				}
-				if (checkForNull(buf, CHECKSIZE)==false)
+				if (checkForNull(buf1, CHECKSIZE)==false)
 				{
-					++misses;
+					++raid1_miss;
 					for (int x = 0; x < CHECKSIZE; ++x)
 					{
-						buf[x] = 0;
+						buf1[x] = 0;
 					}
 				} else
 				{
-					++hits;
+					++raid1_hit;
 				}
+			}
+			if (checkForEqual(buf5,checkAgainstMe,CHECKSIZE) == true)
+			{
+				++raid5;
+			} else if (raid1_miss == 0)
+			{
+				++raid1;
+			} else
+			{
+				++misses;
 			}
 		}
 		if (handle->findGoodBlock() == false)
 		{
 			std::cout << "Couldnt test enough blocks. heuristic guess takes place." << std::endl;
-			std::cout << std::dec << hits << " " << misses << std::endl;
-			for (unsigned int x = 0; x < inFiles.size(); ++x)
-				inFiles.at(x)->reset();
-			if (hits > misses*10)
-			{
-				raidSystem = Raid1;
-				return true;
-			}
-			return false;
+			break;
 		}
 	}
-	std::cout << std::dec << hits << " " << misses << std::endl;
+	std::cout << raid1 << " " << raid5 << " " << misses << std::endl;
 	for (unsigned int j = 0; j < inFiles.size(); ++j)
 		inFiles.at(j)->reset();
-	if (hits > misses*10)
+	if (raid1 > (misses+raid5)*2)
 	{
 		raidSystem = Raid1;
+		return true;
+	} else if (raid5 > (misses+raid1)*2)
+	{
+		raidSystem = Raid5_complete;
 		return true;
 	}
 	return false;
@@ -257,18 +271,55 @@ bool RaidSystem::raidCheck()
 	bool found = false;
 	if (raidSystem == Raid_unknown)
 	{
-		std::cout << "Starting with check for complete raid5" << std::endl;
-		//found = checkIfRaid5();
-		if (found == false)
-		{
-			std::cout << "FAILED!\n Check against raid1." << std::endl;
-			found = checkIfRaid1();
-		}
+		std::cout << "Starting with check for complete raid5 or raid1" << std::endl;
+		found = easyCheck();
 		if (found == false)
 		{
 			std::cout << "FAILED!\n Now the intensive check to estimate the raid version begins." << std::endl;
 			found = intensiveCheck();
 		}
+	} else if (raidSystem == Raid5_user)
+	{
+		if (lostImages == -1)
+		{
+			std::cout << "User input: Raid5! Checking for lost Images or if it's raid1" << std::endl;
+			found = easyCheck();
+			if (found == false)
+			{
+				if (raidSystem == Raid1)
+				{
+					std::cerr << "User input wrong. Estimated raid1!" << std::endl;
+					return false;
+				} else
+				{
+					std::cout << "Images missing. Will recover image later!" << std::endl;
+					raidSystem = Raid5_corrupt;
+				}
+				found = true;
+			} else
+			{
+				std::cout << "Raid 5 is complete. No missing images indicated!" << std::endl;
+			}
+		} else if (lostImages == 0)
+		{
+			raidSystem = Raid5_complete;
+			found = true;
+		} else
+		{
+			raidSystem = Raid5_corrupt;
+			found = true;
+		}
+	} else if (raidSystem == Raid1)
+	{
+		found = true;
+	} else if (raidSystem == Raid0)
+	{
+		if (lostImages > 0)
+		{
+			std::cerr << "User specifies Raid0 with lost images. Cannot be recovered!" << std::endl;
+			return false;
+		}
+		found = true;
 	}
 	return found;
 }
