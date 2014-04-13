@@ -4,6 +4,7 @@
 #include <vector>
 #include <iostream>
 #include <cstdlib>
+#include <fstream>
 
 #include <fileHandler.h>
 #include <defines.h>
@@ -34,6 +35,7 @@ private:
 	// if raidsystem, stripe or lostCount is set, we dont need to test for it
 	// initial values are Raid_unknown, -1, -1
 	Raid raidSystem;
+	std::vector<std::string> dictionary;
 	size_t stripeSize;
 	int lostImages;
 	std::vector<Pattern> stripePattern;
@@ -41,6 +43,7 @@ private:
 	//raid1_check easiest, afterwards easyCheck, to check for raid5_complete
 	//intensive_check for rest, to determine raid1 or raid5_corrupt, or too much corrupt
 	//to do anything with it
+	void loadDictionary(std::string in="/usr/share/dict/american-english");
 	bool checkForNull(char *in, size_t size);
 	bool checkForEqual(char *buf, char *in, size_t size);
 	bool easyCheck();

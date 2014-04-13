@@ -25,6 +25,8 @@ public:
 	FileHandler(std::string inputFolder, std::string outputFolder);
 
 	void reset();
+	bool reloadBuffers();
+	int findStringInBlock(std::string seek);
 	int findString(std::string seek);
 	bool findGoodBlock();
 

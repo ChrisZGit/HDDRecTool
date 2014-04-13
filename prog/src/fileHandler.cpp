@@ -133,6 +133,37 @@ void FileHandler::reset()
 	}
 }
 
+int FileHandler::findStringInBlock(std::string seek)
+{
+	for (unsigned int i = 0; i < inFiles.size(); ++i)
+	{
+		int adr = inFiles.at(i)->findFirstNonemptyBlock();
+		if (adr==-1)
+		{
+		} else
+		{
+			inFiles.at(i)->setOffset(adr);
+			adr = inFiles.at(i)->findString(seek);
+		}
+		if (adr > 0)
+		{
+			return adr;
+		}
+	}
+	return -1;
+}
+
+bool FileHandler::reloadBuffers()
+{
+	std::cout << "reload Buffers" << std::endl;
+	for (unsigned int i = 0; i < inFiles.size(); ++i)
+	{
+		if (inFiles.at(i)->reloadBuffer()==false)
+			return false;
+	}
+	return true;
+}
+
 int FileHandler::findString(std::string seek)
 {
 	reset();
@@ -162,9 +193,8 @@ int FileHandler::findString(std::string seek)
 			if (eof==false)
 				return -1;
 		}
-	}
-	
-	return 0;
+	}	
+	return found;
 }
 
 std::vector<FileReader *> FileHandler::getInFiles()

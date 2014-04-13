@@ -233,9 +233,111 @@ bool RaidSystem::intensiveCheck()
 	return false;
 }
 
+void RaidSystem::loadDictionary(std::string input)
+{
+	std::fstream in(input.c_str(), std::fstream::in);
+	std::string tmp="";
+	std::string row="";
+	char cmp='\0';
+	while (in.good() && !in.eof())
+	{
+		in >> tmp;
+		if (tmp.size()>0)
+		{
+			if (tmp.at(0) != cmp)
+			{
+				cmp = tmp.at(0);
+				dictionary.push_back(row);
+				row ="";
+			} else
+			{
+				if (tmp.at(tmp.size()-2) != 39)
+					row += tmp+" ";
+			}
+		}
+	}
+	dictionary.at(13) += "NTFS";
+	std::cout << "DICT ready" << std::endl;
+}
+
 bool RaidSystem::calculateStripeSize()
 {
-	int adress = handle->findString("Win");
+	loadDictionary();
+	handle->reset();
+
+	std::vector<FileReader *> inFiles = handle->getInFiles();
+
+	int hdd=0;
+	bool found=false;
+	std::vector<std::string> strings;
+	while (found == false)
+	{
+		/*
+		for (unsigned int i = 0; i < inFiles.size(); ++i)
+		{
+			int adr = inFiles.at(i)->findFirstNonemptyBlock();
+			if (adr != -1)
+			{
+				inFiles.at(i)->setOffset(adr);
+				strings = inFiles.at(i)->getAllStringsInBlock();
+				for (unsigned int j = 0; j < strings.size(); ++j)
+				{
+					size_t pos = std::string::npos;
+					int index=strings.at(j)[0]-65;
+					std::string findMe = strings.at(j);
+					if (index >= 32 && index < 58)
+					{
+						index -= 6;
+						pos = dictionary.at(index).find(findMe);
+					} else if (index >= 0 && index < 26)
+					{
+						pos = dictionary.at(index).find(findMe);
+					}
+					if (!(pos == std::string::npos))
+					{
+						j = strings.size();
+						inFiles.at(i)->printBlock();
+						std::cout << "FOUND: " << findMe << std::endl;
+					}
+				}
+			}
+		}
+		*/
+		/*
+		for (unsigned int i = 0; i < dictionary.size(); ++i)
+		{
+			hdd=handle->findStringInBlock(dictionary.at(i));
+			if (hdd != -1)
+			{
+				std::cout << "Found\t" << dictionary.at(i) <<  "\tat hdd: " << hdd << std::endl;
+			}
+			if (i % 100==0)
+			{
+				std::cout << "seeking: " << dictionary.at(i) << std::endl;
+			}
+		}
+		*/
+		std::string ahoj ="";
+		//ahoj += (unsigned char)0xFF;
+		//ahoj += (char)0xD8;
+		//ahoj += 0xFF;
+		//ahoj += 0xE0;
+			hdd=handle->findStringInBlock(ahoj);
+			if (hdd != -1)
+			{
+				std::cout << "Found\t" << ahoj <<  "\tat hdd: " << hdd << std::endl;
+			}
+		
+		if (handle->reloadBuffers() == false)
+		{
+			//end reached
+			return false;
+		}
+	}
+
+	//std::string tmp = "be install";
+	//int adress = handle->findString(tmp);
+	//std::cout << adress << std::endl;
 	return false;
 }
 

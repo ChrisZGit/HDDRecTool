@@ -35,6 +35,50 @@ bool FileReader::emptyBlock()
 	return true;
 }
 
+void FileReader::printBlock()
+{
+	for (int i = 0; i < blockSize; i = i+16)
+	{
+		for (int j = 0; j < 16; ++j)
+		{
+			if (block[i+j] == 0)
+			{
+				std::cout << ".";
+			} else
+				std::cout << block[i+j];
+		}
+		std::cout << std::endl;
+	}
+}
+
+std::vector<std::string> FileReader::getAllStringsInBlock()
+{
+	std::vector<std::string> ret;
+	unsigned int i = 0;
+	while (i < blockSize)
+	{
+		std::string tmp(block+i);
+		int len = tmp.length();
+
+		if (len > 3)
+		{
+			size_t first=0,last=std::string::npos;
+			do
+			{
+				last = std::string::npos;
+				tmp = std::string(tmp,first,last);
+				first=0;
+				last = tmp.find(" ");
+				std::string sub(tmp,first,last);
+				ret.push_back(sub);
+				first=last+1;
+			} while (last != std::string::npos);
+		}
+		i += len+1;
+	}
+	return ret;
+}
+
 void FileReader::setOffset(size_t off)
 {
 	offset=off;
@@ -65,10 +109,8 @@ int FileReader::findString(std::string seek)
 	{
 		return -1;
 	}
-	std::cout << std::hex << globalAdress << " " << offset << " " << ret << std::endl;
-	std::cout << std::hex << globalAdress + offset + ret<< std::endl;
-	std::cout << std::dec << tmp << std::endl;
-	return (int)ret;
+	std::cout << globalAdress + offset + ret << "\tat\t" << path << std::endl;
+	return (int (globalAdress+offset+ret));
 }
 
 bool FileReader::skipInputBuffer(int NumOfBuffers)
@@ -95,7 +137,7 @@ void FileReader::setBlockSize(size_t blockS)
 
 bool FileReader::reloadBuffer()
 {
-	std::cout << "Reloading buffer for " << path << "\t" << std::endl;
+	//std::cout << "Reloading buffer for " << path << std::endl;
 	if (fs.is_open() && fs.good() && !(fs.eof()))
 	{
 		endOfBuf = fs.readsome(loadBuffer, bufferLength);

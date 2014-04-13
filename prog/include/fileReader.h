@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <vector>
 
 #include <defines.h>
 
@@ -28,9 +29,11 @@ public:
 	char *getBuffer();
 	size_t getBufferSize();
 	bool emptyBlock();
+	void printBlock();
 
 	bool endOfImage();
 	
+	std::vector<std::string> getAllStringsInBlock();
 	int findString(std::string seek);
 	bool skipInputBuffer(int NumOfBuffers);
 	void setBlockSize(size_t blockS);
