@@ -155,7 +155,7 @@ int FileHandler::findStringInBlock(std::string seek)
 
 bool FileHandler::reloadBuffers()
 {
-	std::cout << "reload Buffers" << std::endl;
+	//std::cout << "reload Buffers" << std::endl;
 	for (unsigned int i = 0; i < inFiles.size(); ++i)
 	{
 		if (inFiles.at(i)->reloadBuffer()==false)

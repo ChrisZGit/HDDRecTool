@@ -58,6 +58,7 @@ int main(int argc, char *argv[])
 	}
 
 	//Call the Raid Recovery
+	std::cout << "Interpreted parameters. Now starting analysing the raid-system." << std::endl;
 	raidR.run();
 	
 

@@ -36,7 +36,7 @@ private:
 	// initial values are Raid_unknown, -1, -1
 	Raid raidSystem;
 	std::vector<std::string> dictionary;
-	size_t stripeSize;
+	int stripeSize;
 	int lostImages;
 	std::vector<Pattern> stripePattern;
 

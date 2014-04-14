@@ -37,7 +37,7 @@ bool FileReader::emptyBlock()
 
 void FileReader::printBlock()
 {
-	for (int i = 0; i < blockSize; i = i+16)
+	for (unsigned int i = 0; i < blockSize; i = i+16)
 	{
 		for (int j = 0; j < 16; ++j)
 		{
@@ -60,7 +60,7 @@ std::vector<std::string> FileReader::getAllStringsInBlock()
 		std::string tmp(block+i);
 		int len = tmp.length();
 
-		if (len > 3)
+		if (len > 1)
 		{
 			size_t first=0,last=std::string::npos;
 			do
@@ -104,7 +104,7 @@ int FileReader::findString(std::string seek)
 {
 	std::string tmp;
 	tmp.assign(block, blockSize);
-	unsigned int ret = tmp.find(seek);
+	size_t ret = tmp.find(seek);
 	if (ret == std::string::npos)
 	{
 		return -1;
