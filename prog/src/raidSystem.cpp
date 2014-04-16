@@ -181,7 +181,9 @@ void RaidSystem::loadDictionary(std::string input)
 			}
 		}
 	}
-	dictionary.at(13) += "NTFS";
+	dictionary.at(13) += " NTFS";
+	dictionary.at(33) += " http";
+	dictionary.at(7) += " HTTP";
 }
 
 bool RaidSystem::calculateStripeSize()
