@@ -4,10 +4,9 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
+#include <cmath>
 
 #include <defines.h>
-
-//TODO: get - offset, get - globalAdress
 
 class FileReader
 {
@@ -28,6 +27,7 @@ public:
 
 	char *getBuffer();
 	size_t getBufferSize();
+	float calcEntropyOfCurrentBlock();
 	bool emptyBlock();
 	void printBlock();
 
@@ -37,8 +37,10 @@ public:
 	int findString(std::string seek);
 	bool skipInputBuffer(int NumOfBuffers);
 	void setBlockSize(size_t blockS);
+	size_t getBufferLength() {return bufferLength;}
+	size_t getBlockSize() {return blockSize;}
 	void setOffset(size_t in);
-	int findFirstNonemptyBlock();
+	int findFirstNonemptyBlock(int add=0);
 	bool reloadBuffer();
 
 	bool newBlock();

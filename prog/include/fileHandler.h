@@ -5,8 +5,12 @@
 #include <iostream>
 #include <cstdlib>
 #include <vector>
+#include <chrono>
+#include <future>
 #include <dirent.h>
+#include <map>
 #include <string.h>
+#include <thread>
 
 #include <fileReader.h>
 #include <defines.h>
@@ -29,6 +33,7 @@ public:
 	int findStringInBlock(std::string seek);
 	int findString(std::string seek);
 	bool findGoodBlock();
+	bool estimateStripeSize();
 
 	std::vector<FileReader*> getInFiles();
 	FileReader *getFileReader(size_t num);

@@ -27,6 +27,28 @@ size_t FileReader::getBufferSize()
 	return blockSize;
 }
 
+float FileReader::calcEntropyOfCurrentBlock()
+{
+	float ret = 0.0f;
+	unsigned int possibleVals[255];
+	for (unsigned int i = 0; i < 255; ++i)
+	{
+		possibleVals[i]=0;
+	}
+	for (unsigned int i = 0; i < blockSize; ++i)
+	{
+		possibleVals[(unsigned char)block[i]] += 1;
+	}
+	float tmp;
+	for (unsigned int i = 0; i < 255; ++i)
+	{
+		tmp = (float)possibleVals[i]/(float)blockSize;
+		if (tmp>0)
+			ret += -tmp * std::log2(tmp);
+	}
+	return ret;
+}
+
 bool FileReader::emptyBlock()
 {
 	for (size_t i = 0; i < endOfBuf; ++i)
@@ -57,7 +79,7 @@ std::vector<std::string> FileReader::getAllStringsInBlock()
 	unsigned int i = 0;
 	while (i < blockSize)
 	{
-		std::string tmp(block+i);
+		std::string tmp((char *)(block+i));
 		int len = tmp.length();
 
 		if (len > 1)
@@ -85,9 +107,9 @@ void FileReader::setOffset(size_t off)
 	block = &loadBuffer[offset];
 }
 
-int FileReader::findFirstNonemptyBlock()
+int FileReader::findFirstNonemptyBlock(int add)
 {
-	for (size_t i = offset; i < endOfBuf-blockSize; i += blockSize)
+	for (size_t i = offset+add; i < endOfBuf-blockSize; i += blockSize)
 	{
 		for (size_t j = 0; j < blockSize; ++j)
 		{
@@ -103,7 +125,7 @@ int FileReader::findFirstNonemptyBlock()
 int FileReader::findString(std::string seek)
 {
 	std::string tmp;
-	tmp.assign(block, blockSize);
+	tmp.assign((char *)block, blockSize);
 	size_t ret = tmp.find(seek);
 	if (ret == std::string::npos)
 	{
@@ -119,7 +141,7 @@ bool FileReader::skipInputBuffer(int NumOfBuffers)
 	if (fs.is_open() && fs.good() && !(fs.eof()))
 	{
 		fs.seekg((NumOfBuffers-1)*bufferLength + fs.tellg());
-		endOfBuf = fs.readsome(loadBuffer, bufferLength);
+		endOfBuf = fs.readsome((char *)loadBuffer, bufferLength);
 		offset = 0;
 	} 
 	if (fs.bad() || endOfBuf==0 || fs.eof())
@@ -140,7 +162,7 @@ bool FileReader::reloadBuffer()
 	//std::cout << "Reloading buffer for " << path << std::endl;
 	if (fs.is_open() && fs.good() && !(fs.eof()))
 	{
-		endOfBuf = fs.readsome(loadBuffer, bufferLength);
+		endOfBuf = fs.readsome((char *)loadBuffer, bufferLength);
 		offset = 0;
 		globalAdress += bufferLength;
 	} 
@@ -163,18 +185,6 @@ bool FileReader::newBlock()
 	}
 	block = &loadBuffer[offset];
 	return true;
-	/*
-	if (fs.is_open() && fs.good() && !(fs.eof()))
-	{
-		endOfBuf = fs.readsome(loadBuffer, bufferLength);
-	} 
-	if (fs.bad() || endOfBuf==0 || fs.eof())
-	{
-		std::cerr << "End of File reached" << std::endl;
-		return false;
-	}
-	return true;
-	*/
 }
 
 void FileReader::reset()

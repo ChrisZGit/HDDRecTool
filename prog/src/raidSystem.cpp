@@ -197,8 +197,20 @@ bool RaidSystem::calculateStripeSize()
 
 	bool found=false;
 	std::vector<std::string> strings;
+	handle->estimateStripeSize();
+		/*
 	while (found == false)
 	{
+		while (handle->findGoodBlock() == true)
+		{
+			for (unsigned int i = 0; i < inFiles.size(); ++i)
+			{
+				float t = inFiles.at(i)->calcEntropyOfCurrentBlock(); 
+				std::cout << t << std::endl;
+			}
+		}
+		*/
+		/*
 		for (unsigned int i = 0; i < inFiles.size(); ++i)
 		{
 			int adr = inFiles.at(i)->findFirstNonemptyBlock();
@@ -230,6 +242,7 @@ bool RaidSystem::calculateStripeSize()
 				}
 			}
 		}
+		*/
 		/*
 		   for (unsigned int i = 0; i < dictionary.size(); ++i)
 		   {
@@ -244,18 +257,7 @@ bool RaidSystem::calculateStripeSize()
 		   }
 		   }
 		 */
-		/*
-		   std::string ahoj ="";
-		//ahoj += (unsigned char)0xFF;
-		//ahoj += (char)0xD8;
-		//ahoj += 0xFF;
-		//ahoj += 0xE0;
-		hdd=handle->findStringInBlock(ahoj);
-		if (hdd != -1)
-		{
-		std::cout << "Found\t" << ahoj <<  "\tat hdd: " << hdd << std::endl;
-		}
-		 */
+	/*
 		if (handle->reloadBuffers() == false)
 		{
 			//end reached
@@ -263,6 +265,7 @@ bool RaidSystem::calculateStripeSize()
 			return false;
 		}
 	}
+	*/
 
 	//std::string tmp = "be install";
 	//int adress = handle->findString(tmp);
@@ -304,6 +307,9 @@ bool RaidSystem::recoverLostImage()
 bool RaidSystem::raidCheck()
 {
 	bool found = false;
+	found = calculateStripeSize();
+	if (found == false)
+		return false;
 	if (raidSystem == Raid_unknown)
 	{
 		std::cout << "Starting with check for complete raid5 or raid1" << std::endl;

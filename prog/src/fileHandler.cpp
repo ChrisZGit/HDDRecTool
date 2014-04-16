@@ -31,7 +31,8 @@ FileHandler::FileHandler(std::string inputFolder, std::string outputFolder)
 	int maxSize = (BUFLENGTH/(imgs.size()+1))*2;
 	maxSize = maxSize/BLOCKSIZE;
 	maxSize = maxSize*BLOCKSIZE;
-	maxSize = std::min(maxSize,64*1024*1024);
+	maxSize = std::min(maxSize,256*1024*1024);
+	std::cout << "Image-Buffers:\t" << maxSize/1024/1024 << "MB" << std::endl;
 	for (unsigned int i = 0; i < imgs.size(); ++i)
 	{
 		FileReader *a = new FileReader(imgs.at(i),maxSize);
@@ -122,6 +123,97 @@ bool FileHandler::findGoodBlock()
 	{
 		inFiles.at(i)->setOffset(offset);
 	}
+	return true;
+}
+
+bool FileHandler::estimateStripeSize()
+{
+	auto lambda = [&] (size_t id) -> int
+	{
+		const int CHECKS = 64*1024*1024;
+		std::vector<std::pair<size_t, float>> entropies;
+		std::vector<int> guesses;
+		if (id >= inFiles.size())
+			return -1;
+		FileReader *me = inFiles.at(id);
+		me->reset();
+		int offset=0;
+		float ent=0;
+		int reloads=0;
+		do
+		{
+			while ((offset=me->findFirstNonemptyBlock())!=-1)
+			{
+				me->setOffset(offset);
+				ent = me->calcEntropyOfCurrentBlock();
+				std::pair<size_t, float> input(offset+reloads*me->getBufferLength(), ent);
+				me->setOffset(me->getBlockSize()+offset);
+				entropies.push_back(input);
+				if (entropies.size() >= CHECKS)
+					break;
+			}
+			if (me->reloadBuffer()==false)
+			{
+				break;
+			}
+			++reloads;
+			std::cout << "Thread: " << id << "\t" << entropies.size() << std::endl;
+		} while (entropies.size() < CHECKS);
+		guesses.push_back(1);
+
+		if (id == 0 && entropies.size()>0)
+		{
+			size_t check=0;
+			size_t last = 0;
+			float val = 0.0f;
+			check = entropies.at(0).first;
+			last = entropies.at(0).first;
+			val = entropies.at(0).second;
+			for (unsigned int i = 1; i < entropies.size(); ++i)
+			{
+				auto in = entropies.at(i);
+				if (last+me->getBlockSize() != in.first || 0.05*val > in.second || 2*val < in.second)
+				{
+					std::cout << last+me->getBlockSize() << "\t" << check << "\t" << (float)(last+me->getBlockSize()-check)/1024.0f << "KB\t to next readable Block:\t" << (float)(in.first-check)/1024.0f << "KB" << std::endl;
+					check = in.first;
+					val = in.second;
+				}
+				last = in.first;
+			}
+		}
+		std::cout << "Thread: " << id << " finished " << std::endl;
+
+		me->reset();
+		return -1;
+	};
+	unsigned int NUM_THREADS = inFiles.size();
+	std::vector<std::future<int>> futureResults(inFiles.size());
+	std::vector<int> results;
+	for (size_t i = 0; i < NUM_THREADS; ++i)
+	{
+		futureResults[i] = std::async(std::launch::async, lambda, i);
+	}
+	std::future_status status;
+	while (results.size() < inFiles.size())
+	{
+		for (size_t i = 0; i < NUM_THREADS; ++i)
+		{
+			try
+			{
+				status = futureResults[i].wait_for(std::chrono::milliseconds(200));
+			} 
+			catch (std::future_error &e)
+			{
+				//std::cerr << "Future error " << e.what() << std::endl;
+				continue;
+			}
+			if (status == std::future_status::ready)
+			{
+				results.push_back(futureResults[i].get());
+			}
+		}
+	}
+
 	return true;
 }
 
