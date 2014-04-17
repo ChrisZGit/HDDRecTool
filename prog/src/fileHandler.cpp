@@ -1,4 +1,5 @@
 #include <fileHandler.h>
+#include <iomanip>
 
 
 FileHandler::FileHandler(std::string inputFolder, std::string outputFolder)
@@ -128,13 +129,13 @@ bool FileHandler::findGoodBlock()
 
 bool FileHandler::estimateStripeSize()
 {
-	auto lambda = [&] (size_t id) -> int
+	auto lambda = [&] (size_t id) -> std::vector<std::pair<size_t, float>>
 	{
 		const int CHECKS = 64*1024*1024;
 		std::vector<std::pair<size_t, float>> entropies;
 		std::vector<int> guesses;
 		if (id >= inFiles.size())
-			return -1;
+			return entropies;
 		FileReader *me = inFiles.at(id);
 		me->reset();
 		int offset=0;
@@ -146,7 +147,7 @@ bool FileHandler::estimateStripeSize()
 			{
 				me->setOffset(offset);
 				ent = me->calcEntropyOfCurrentBlock();
-				std::pair<size_t, float> input(offset+reloads*me->getBufferLength(), ent);
+				std::pair<size_t, float> input((offset+reloads*me->getBufferLength())-63*512, ent);
 				me->setOffset(me->getBlockSize()+offset);
 				entropies.push_back(input);
 				if (entropies.size() >= CHECKS)
@@ -161,6 +162,7 @@ bool FileHandler::estimateStripeSize()
 		} while (entropies.size() < CHECKS);
 		guesses.push_back(1);
 
+		/*
 		if (id == 0 && entropies.size()>0)
 		{
 			size_t check=0;
@@ -181,14 +183,17 @@ bool FileHandler::estimateStripeSize()
 				last = in.first;
 			}
 		}
+		*/
 		std::cout << "Thread: " << id << " finished " << std::endl;
 
 		me->reset();
-		return -1;
+		return entropies;
 	};
 	unsigned int NUM_THREADS = inFiles.size();
-	std::vector<std::future<int>> futureResults(inFiles.size());
-	std::vector<int> results;
+	//std::vector<std::future<int>> futureResults(inFiles.size());
+	//std::vector<int> results;
+	std::vector<std::future<std::vector<std::pair<size_t,float>>>> futureResults(inFiles.size());
+	std::vector<std::vector<std::pair<size_t,float>>> results;
 	for (size_t i = 0; i < NUM_THREADS; ++i)
 	{
 		futureResults[i] = std::async(std::launch::async, lambda, i);
@@ -200,7 +205,7 @@ bool FileHandler::estimateStripeSize()
 		{
 			try
 			{
-				status = futureResults[i].wait_for(std::chrono::milliseconds(200));
+				status = futureResults.at(i).wait_for(std::chrono::milliseconds(500));
 			} 
 			catch (std::future_error &e)
 			{
@@ -209,9 +214,38 @@ bool FileHandler::estimateStripeSize()
 			}
 			if (status == std::future_status::ready)
 			{
-				results.push_back(futureResults[i].get());
+				std::cout << "Thread " << i << "\t pushed" << std::endl;
+				std::vector<std::pair<size_t,float>> res = futureResults.at(i).get();
+				results.push_back(res);
 			}
 		}
+	}
+	size_t check=0;
+	size_t last = 0;
+	float val = 0.0f;
+	for (unsigned int j = 0; j < results.size(); ++j)
+	{
+		FileReader *me = inFiles.at(j);
+		std::vector<std::pair<size_t,float>> entropies = results.at(j);
+		check = entropies.at(0).first;
+		last = entropies.at(0).first;
+		val = entropies.at(0).second;
+		for (unsigned int i = 0; i < entropies.size(); ++i)
+		{
+			auto in = entropies.at(i);
+			//if (last+me->getBlockSize() != in.first /*|| 0.05*val > in.second || 2*val < in.second*/)
+			/*
+			{
+				std::cout << ((last + me->getBlockSize())/1024)-1 << "\t" << check/1024 << "\t" << (float)(last+me->getBlockSize()-check)/1024.0f << "KB\t to next readable Block:\t" << (float)(in.first-check)/1024.0f << "KB\t" << (int)(check/1024/64)*64 << std::endl;
+				check = in.first;
+				val = in.second;
+			}
+			*/
+			std::cout << std::setw(10) << in.first/1024 << "\t" << std::setw(10) << in.second << "\t" << std::setw(10) << (in.first+me->getBlockSize())/1024 << "\t" << j << std::endl;
+			last = in.first;
+		}
+		std::cout << std::endl;
+		std::cout << std::endl;
 	}
 
 	return true;
