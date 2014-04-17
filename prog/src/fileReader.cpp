@@ -40,7 +40,7 @@ float FileReader::calcEntropyOfCurrentBlock()
 		possibleVals[(unsigned char)block[i]] += 1;
 	}
 	float tmp;
-	for (unsigned int i = 1; i < 256; ++i)
+	for (unsigned int i = 0; i < 256; ++i)
 	{
 		tmp = (float)possibleVals[i]/(float)blockSize;
 		if (tmp>0)

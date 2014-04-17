@@ -147,7 +147,8 @@ bool FileHandler::estimateStripeSize()
 			{
 				me->setOffset(offset);
 				ent = me->calcEntropyOfCurrentBlock();
-				std::pair<size_t, float> input((offset+reloads*me->getBufferLength())-63*512, ent);
+				//std::pair<size_t, float> input((offset+reloads*me->getBufferLength())-63*512, ent);
+				std::pair<size_t, float> input((offset+reloads*me->getBufferLength()), ent);
 				me->setOffset(me->getBlockSize()+offset);
 				entropies.push_back(input);
 				if (entropies.size() >= CHECKS)
@@ -223,6 +224,89 @@ bool FileHandler::estimateStripeSize()
 	size_t check=0;
 	size_t last = 0;
 	float val = 0.0f;
+	size_t *pointer = new size_t[results.size()];
+	size_t *lowest = new size_t[results.size()];
+	FileReader **files = new FileReader*[inFiles.size()];
+	for (unsigned int i = 0; i < results.size(); ++i)
+	{
+		files[i] = inFiles.at(i);
+	}
+	while (true)
+	{
+		bool killMe = false;
+		for (unsigned int i = 0; i < results.size(); ++i)
+		{
+			if (pointer[i] == results.at(i).size())
+			{
+				killMe = true;
+				break;
+			}
+		}
+		if (killMe == true)
+			break;
+		bool aligned=true;
+		size_t currentLowest=0xFFFFFFFF;
+		while (aligned == true)
+		{
+			for (unsigned int i = 0; i < results.size(); ++i)
+			{
+				lowest[i] = results.at(i).at(pointer[i]).first;
+				currentLowest = std::min(currentLowest,lowest[i]);
+			}
+			for (unsigned int i = 0; i < results.size(); ++i)
+			{
+				if(currentLowest != lowest[i])
+				{
+					aligned = false; 
+					break;
+				}
+			}
+			if (aligned == true)
+			{
+				std::cout << std::setw(10) << lowest[0]/1024 << "\t";
+				for (unsigned int i = 0; i < results.size(); ++i)
+				{
+					std::cout << std::setw(10) << results.at(i).at(pointer[i]).second << "\t"; 
+					pointer[i]++;
+				}
+				std::cout << std::endl;
+			}
+		}
+		while (aligned == false)
+		{
+			currentLowest = 0xFFFFFFFF;
+			for (unsigned int i = 0; i < results.size(); ++i)
+			{
+				lowest[i] = results.at(i).at(pointer[i]).first;
+				currentLowest = std::min(currentLowest,lowest[i]);
+			}
+			aligned = true;
+			for (unsigned int i = 0; i < results.size(); ++i)
+			{
+				if(currentLowest != lowest[i])
+				{
+					aligned = false; 
+					break;
+				}
+			}
+			if (aligned == true)
+				break;
+			std::cout << std::setw(10) << currentLowest/1024 << "\t";
+			for (unsigned int i = 0; i < results.size(); ++i)
+			{
+				if (results.at(i).at(pointer[i]).first > currentLowest)
+				{
+					std::cout << std::setw(10) << "0.00000\t"; 
+				} else
+				{
+					std::cout << std::setw(10) << results.at(i).at(pointer[i]).second << "\t"; 
+					pointer[i]++;
+				}
+			}
+			std::cout << std::endl;
+		}
+	}
+			/*
 	for (unsigned int j = 0; j < results.size(); ++j)
 	{
 		FileReader *me = inFiles.at(j);
@@ -233,20 +317,19 @@ bool FileHandler::estimateStripeSize()
 		for (unsigned int i = 0; i < entropies.size(); ++i)
 		{
 			auto in = entropies.at(i);
-			//if (last+me->getBlockSize() != in.first /*|| 0.05*val > in.second || 2*val < in.second*/)
-			/*
+			//if (last+me->getBlockSize() != in.first || 0.05*val > in.second || 2*val < in.second)
 			{
-				std::cout << ((last + me->getBlockSize())/1024)-1 << "\t" << check/1024 << "\t" << (float)(last+me->getBlockSize()-check)/1024.0f << "KB\t to next readable Block:\t" << (float)(in.first-check)/1024.0f << "KB\t" << (int)(check/1024/64)*64 << std::endl;
-				check = in.first;
-				val = in.second;
+			//	std::cout << ((last + me->getBlockSize())/1024)-1 << "\t" << check/1024 << "\t" << (float)(last+me->getBlockSize()-check)/1024.0f << "KB\t to next readable Block:\t" << (float)(in.first-check)/1024.0f << "KB\t" << (int)(check/1024/64)*64 << std::endl;
+			//	check = in.first;
+			//	val = in.second;
 			}
-			*/
 			std::cout << std::setw(10) << in.first/1024 << "\t" << std::setw(10) << in.second << "\t" << std::setw(10) << (in.first+me->getBlockSize())/1024 << "\t" << j << std::endl;
 			last = in.first;
 		}
 		std::cout << std::endl;
 		std::cout << std::endl;
 	}
+			*/
 
 	return true;
 }
