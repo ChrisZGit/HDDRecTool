@@ -227,16 +227,133 @@ bool FileHandler::estimateStripeSize()
 	size_t *pointer = new size_t[results.size()];
 	size_t *lowest = new size_t[results.size()];
 	FileReader **files = new FileReader*[inFiles.size()];
+	std::vector<size_t> adressEdges;
+	size_t lastAdress = 0;
 	for (unsigned int i = 0; i < results.size(); ++i)
 	{
 		files[i] = inFiles.at(i);
+		pointer[i] = 0;
+		while (results.at(i).at(pointer[i]).first < 1024*1024)
+		{
+			++pointer[i];
+		}
 	}
 	while (true)
 	{
 		bool killMe = false;
 		for (unsigned int i = 0; i < results.size(); ++i)
 		{
-			if (pointer[i] == results.at(i).size())
+			if (pointer[i] >= results.at(i).size())
+			{
+				killMe = true;
+				break;
+			}
+		}
+		if (killMe == true)
+			break;
+		
+		for (unsigned int i = 0; i < results.size(); ++i)
+		{
+			size_t currentEdge = results.at(i).at(pointer[i]).second;
+			if (results.at(i).at(pointer[i]).second > 6.0f)
+			{
+				adressEdges.push_back(results.at(i).at(pointer[i]).first/1024);
+				pointer[i]++;
+				if (pointer[i] >= results.at(i).size())
+				{
+					break;
+				}
+				while (results.at(i).at(pointer[i]).first-files[i]->getBlockSize() == results.at(i).at(pointer[i]-1).first)
+				{
+					pointer[i]++;
+					if (pointer[i] >= results.at(i).size())
+					{
+						break;
+					}
+				}
+				if (pointer[i] >= results.at(i).size())
+				{
+					break;
+				}
+				adressEdges.push_back((results.at(i).at(pointer[i]).first + files[i]->getBlockSize())/1024 );
+			} else
+			{
+				pointer[i]++;
+				if (pointer[i] >= results.at(i).size())
+				{
+					break;
+				}
+				while (results.at(i).at(pointer[i]).first-files[i]->getBlockSize() == results.at(i).at(pointer[i]-1).first)
+				{
+					pointer[i]++;
+					if (pointer[i] >= results.at(i).size())
+					{
+						break;
+					}
+				}
+				if (pointer[i] >= results.at(i).size())
+				{
+					break;
+				}
+			}
+		}
+	}
+	for (auto in : adressEdges)
+	{
+		if (in % 1024 == 0)
+		{
+			std::cout << "1024:\t" << in << std::endl;
+			continue;
+		}
+		if (in % 512 == 0)
+		{
+			std::cout << " 512:\t" << in << std::endl;
+			continue;
+		}
+		if (in % 256 == 0)
+		{
+			std::cout << " 256:\t" << in << std::endl;
+			continue;
+		}
+		if (in % 128 == 0)
+		{
+			std::cout << " 128:\t" << in << std::endl;
+			continue;
+		}
+		if (in % 64 == 0)
+		{
+			std::cout << "  64:\t" << in << std::endl;
+			continue;
+		}
+		if (in % 32 == 0)
+		{
+			std::cout << "  32:\t" << in << std::endl;
+			continue;
+		}
+		if (in % 16 == 0)
+		{
+			std::cout << "  16:\t" << in << std::endl;
+			continue;
+		}
+		if (in % 8 == 0)
+		{
+			std::cout << "   8:\t" << in << std::endl;
+			continue;
+		}
+		if (in % 4 == 0)
+		{
+			std::cout << "   4:\t" << in << std::endl;
+			continue;
+		}
+	}
+	
+	/*
+	while (true)
+	{
+		bool killMe = false;
+		for (unsigned int i = 0; i < results.size(); ++i)
+		{
+			if (pointer[i] >= results.at(i).size())
 			{
 				killMe = true;
 				break;
@@ -250,6 +367,18 @@ bool FileHandler::estimateStripeSize()
 		{
 			for (unsigned int i = 0; i < results.size(); ++i)
 			{
+				if (pointer[i] >= results.at(i).size())
+				{
+					killMe = true;
+					break;
+				}
+			}
+			if (killMe == true)
+			{
+				break;
+			}
+			for (unsigned int i = 0; i < results.size(); ++i)
+			{
 				lowest[i] = results.at(i).at(pointer[i]).first;
 				currentLowest = std::min(currentLowest,lowest[i]);
 			}
@@ -261,12 +390,36 @@ bool FileHandler::estimateStripeSize()
 					break;
 				}
 			}
+			if ((currentLowest-lastAdress)/1024 < 100)
+			{
+				lastAdress = lastAdress+inFiles.at(0)->getBlockSize();
+				for (;lastAdress < currentLowest; lastAdress += inFiles.at(0)->getBlockSize())
+				{
+					std::cout << std::setw(10) << lastAdress/1024 << "\t";
+					for (unsigned int i = 0; i < results.size(); ++i)
+					{
+						std::cout << std::setw(10) << "0.00000\t"; 
+					}
+					std::cout << std::endl;
+				}
+			}
+			else
+			{
+				std::cout << std::endl;
+			}
 			if (aligned == true)
 			{
+				lastAdress = currentLowest;
 				std::cout << std::setw(10) << lowest[0]/1024 << "\t";
 				for (unsigned int i = 0; i < results.size(); ++i)
 				{
-					std::cout << std::setw(10) << results.at(i).at(pointer[i]).second << "\t"; 
+					if (results.at(i).at(pointer[i]).second == 0.0f)
+					{
+						std::cout << std::setw(10) << "0.00000\t";
+					} else
+					{
+						std::cout << std::setw(10) << (float)results.at(i).at(pointer[i]).second << "\t"; 
+					}
 					pointer[i]++;
 				}
 				std::cout << std::endl;
@@ -274,6 +427,18 @@ bool FileHandler::estimateStripeSize()
 		}
 		while (aligned == false)
 		{
+			for (unsigned int i = 0; i < results.size(); ++i)
+			{
+				if (pointer[i] >= results.at(i).size())
+				{
+					killMe = true;
+					break;
+				}
+			}
+			if (killMe == true)
+			{
+				break;
+			}
 			currentLowest = 0xFFFFFFFF;
 			for (unsigned int i = 0; i < results.size(); ++i)
 			{
@@ -291,46 +456,44 @@ bool FileHandler::estimateStripeSize()
 			}
 			if (aligned == true)
 				break;
+			if ((currentLowest-lastAdress)/1024 < 100)
+			{
+				lastAdress = lastAdress+inFiles.at(0)->getBlockSize();
+				for (;lastAdress < currentLowest; lastAdress += inFiles.at(0)->getBlockSize())
+				{
+					std::cout << std::setw(10) << lastAdress/1024 << "\t";
+					for (unsigned int i = 0; i < results.size(); ++i)
+					{
+						std::cout << std::setw(10) << "0.00000\t"; 
+					}
+					std::cout << std::endl;
+				}
+			}
+			else
+			{
+				std::cout << std::endl;
+			}
 			std::cout << std::setw(10) << currentLowest/1024 << "\t";
 			for (unsigned int i = 0; i < results.size(); ++i)
 			{
 				if (results.at(i).at(pointer[i]).first > currentLowest)
 				{
 					std::cout << std::setw(10) << "0.00000\t"; 
+				} else if (results.at(i).at(pointer[i]).second == 0.0f)
+				{
+					std::cout << std::setw(10) << "0.00000\t";
+					pointer[i]++;
 				} else
 				{
-					std::cout << std::setw(10) << results.at(i).at(pointer[i]).second << "\t"; 
+					std::cout << std::setw(10) << (float)results.at(i).at(pointer[i]).second << "\t"; 
 					pointer[i]++;
 				}
 			}
+			lastAdress = currentLowest;
 			std::cout << std::endl;
 		}
 	}
-			/*
-	for (unsigned int j = 0; j < results.size(); ++j)
-	{
-		FileReader *me = inFiles.at(j);
-		std::vector<std::pair<size_t,float>> entropies = results.at(j);
-		check = entropies.at(0).first;
-		last = entropies.at(0).first;
-		val = entropies.at(0).second;
-		for (unsigned int i = 0; i < entropies.size(); ++i)
-		{
-			auto in = entropies.at(i);
-			//if (last+me->getBlockSize() != in.first || 0.05*val > in.second || 2*val < in.second)
-			{
-			//	std::cout << ((last + me->getBlockSize())/1024)-1 << "\t" << check/1024 << "\t" << (float)(last+me->getBlockSize()-check)/1024.0f << "KB\t to next readable Block:\t" << (float)(in.first-check)/1024.0f << "KB\t" << (int)(check/1024/64)*64 << std::endl;
-			//	check = in.first;
-			//	val = in.second;
-			}
-			std::cout << std::setw(10) << in.first/1024 << "\t" << std::setw(10) << in.second << "\t" << std::setw(10) << (in.first+me->getBlockSize())/1024 << "\t" << j << std::endl;
-			last = in.first;
-		}
-		std::cout << std::endl;
-		std::cout << std::endl;
-	}
-			*/
-
+	*/
 	return true;
 }
 
