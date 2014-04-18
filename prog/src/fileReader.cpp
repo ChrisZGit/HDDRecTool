@@ -1,18 +1,24 @@
 #include <fileReader.h>
 
+static volatile bool loadAvail=true;
+static std::mutex mtx;
+
 FileReader::FileReader(std::string inPath, size_t size)
 {
 	path=inPath;
 	bufferLength = size;
 	fs.open(path.c_str(), std::fstream::in);
 	loadBuffer = new char[bufferLength];
+	workBuffer = new char[bufferLength];
+	localLoad = true;
 	if (fs==NULL)
 	{
 		std::cerr << "ERROR FileReader::FileReader - Couldnt open file: " << path << std::endl;
 	}
-	endOfBuf = 0;
+	endOfLoadBuf = 0;
 	blockSize = BLOCKSIZE;
 	reloadBuffer();
+	asyncReload();
 	globalAdress = 0;
 	offset = 0;
 }
@@ -51,8 +57,8 @@ float FileReader::calcEntropyOfCurrentBlock()
 
 bool FileReader::emptyBlock()
 {
-	for (size_t i = 0; i < endOfBuf; ++i)
-		if (loadBuffer[i] > 0)
+	for (size_t i = 0; i < endOfWorkBuf; ++i)
+		if (workBuffer[i] > 0)
 			return false;
 	return true;
 }
@@ -104,16 +110,16 @@ std::vector<std::string> FileReader::getAllStringsInBlock()
 void FileReader::setOffset(size_t off)
 {
 	offset=off;
-	block = &loadBuffer[offset];
+	block = &workBuffer[offset];
 }
 
 int FileReader::findFirstNonemptyBlock(int add)
 {
-	for (size_t i = offset+add; i < endOfBuf-blockSize; i += blockSize)
+	for (size_t i = offset+add; i+blockSize < endOfWorkBuf; i += blockSize)
 	{
 		for (size_t j = 0; j < blockSize; ++j)
 		{
-			if (loadBuffer[i+j] > 0)
+			if (workBuffer[i+j] > 0)
 			{
 				return (int)i;
 			}
@@ -138,17 +144,21 @@ int FileReader::findString(std::string seek)
 bool FileReader::skipInputBuffer(int NumOfBuffers)
 {
 	std::cout << "Skipping buffer for " << path << std::endl;
+	/*
 	if (fs.is_open() && fs.good() && !(fs.eof()))
 	{
 		fs.seekg((NumOfBuffers-1)*bufferLength + fs.tellg());
-		endOfBuf = fs.readsome((char *)loadBuffer, bufferLength);
+		endOfWorkBuf = fs.readsome((char *)workBuffer, bufferLength);
 		offset = 0;
 	} 
-	if (fs.bad() || endOfBuf==0 || fs.eof())
+	if (fs.bad() || endOfWorkBuf==0 || fs.eof())
 	{
 		std::cerr << "End of File reached" << std::endl;
 		return false;
 	}
+	*/
+	for (int i = 0; i < NumOfBuffers; ++i)
+		asyncReload();
 	return true;
 }
 
@@ -157,41 +167,107 @@ void FileReader::setBlockSize(size_t blockS)
 	this->blockSize=blockS;
 }
 
-bool FileReader::reloadBuffer()
+bool FileReader::asyncReload()
 {
-	//std::cout << "Reloading buffer for " << path << std::endl;
-	if (fs.is_open() && fs.good() && !(fs.eof()))
+	auto lambda = [this] () -> void
 	{
-		endOfBuf = fs.readsome((char *)loadBuffer, bufferLength);
-		offset = 0;
-		globalAdress += bufferLength;
-	} 
-	if (fs.bad() || endOfBuf==0 || fs.eof())
+		reloadBuffer();
+		localMtx.lock();
+		localLoad = true;
+		localMtx.unlock();
+		
+	};
+	localMtx.lock();
+	while (localLoad == false)
 	{
-		std::cerr << "End of File reached" << std::endl;
+		localMtx.unlock();
+		usleep(1000*5);
+		localMtx.lock();
+	}
+	localLoad = false;
+	localMtx.unlock();
+	if (fs.bad() || endOfLoadBuf==0 || fs.eof())
+	{
+		localMtx.lock();
+		localLoad = true;
+		localMtx.unlock();
 		return false;
 	}
-	block = loadBuffer;
+	char *tmp = loadBuffer;
+	loadBuffer = workBuffer;
+	workBuffer = tmp;
+	block = workBuffer;
+	offset = 0;
+	endOfWorkBuf = endOfLoadBuf;
+	globalAdress += bufferLength;
+
+	threadSync = std::async(std::launch::async, lambda); //even when not used, have to use future object, otherwise the out-of-scope destructor will wait for .get() (therefore no ASYNC LAUNCH ANYMORE)
+	
+	return true;
+}
+
+bool FileReader::reloadBuffer()
+{
+	mtx.lock();
+	while (loadAvail == false)
+	{
+		mtx.unlock();
+		usleep(100*5);
+		mtx.lock();
+	}
+	loadAvail = false;
+	mtx.unlock();
+	if (fs.is_open() && fs.good() && !(fs.eof()))
+	{
+		endOfLoadBuf = fs.readsome((char *)loadBuffer, bufferLength);
+		//offset = 0;
+		//globalAdress += bufferLength;
+	} 
+	if (fs.bad() || endOfLoadBuf==0 || fs.eof())
+	{
+		mtx.lock();
+		loadAvail=true;
+		mtx.unlock();
+	//	std::cerr << "End of File reached" << std::endl;
+		return false;
+	}
+	mtx.lock();
+	loadAvail=true;
+	mtx.unlock();
+	//block = loadBuffer;
 	return true;
 }
 
 bool FileReader::newBlock()
 {
 	offset += blockSize;
-	if (offset+blockSize >= endOfBuf)
+	if (offset+blockSize >= endOfWorkBuf)
 	{
 		offset -= blockSize;
 		return false;
 	}
-	block = &loadBuffer[offset];
+	block = &workBuffer[offset];
 	return true;
 }
 
 void FileReader::reset()
 {
+	localMtx.lock();
+	while (localLoad == false)
+	{
+		localMtx.unlock();
+		usleep(1000*5);
+		localMtx.lock();
+	}
+	localLoad = false;
+	localMtx.unlock();
 	if (fs.good())
 		fs.seekg(0);
 	reloadBuffer();
+	localMtx.lock();
+	localLoad = true;
+	localMtx.unlock();
+	asyncReload();
 	globalAdress=0;
 }
 

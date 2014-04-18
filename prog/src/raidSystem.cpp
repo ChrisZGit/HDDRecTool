@@ -90,9 +90,9 @@ bool RaidSystem::easyCheck()
 		buf1[j] = 0;
 	}
 
-	for (int count=0; count < 500; ++count)
+	for (int count=0; count < 400; ++count)
 	{
-		for (int i = 0; i < 20; ++i)
+		for (int i = 0; i < 5; ++i)
 		{
 			checkAgainstMe = inFiles.at(0)->getBuffer();
 			startAdress = rand() % (inFiles.at(0)->getBufferSize()-CHECKSIZE);
@@ -139,7 +139,7 @@ bool RaidSystem::easyCheck()
 			break;
 		}
 	}
-//	std::cout << raid1 << " " << raid5 << " " << misses << std::endl;
+	std::cout << raid1 << " " << raid5 << " " << misses << std::endl;
 	handle->reset();
 	if (raid1 > (misses+raid5)*1.5)
 	{
@@ -155,7 +155,7 @@ bool RaidSystem::easyCheck()
 
 bool RaidSystem::intensiveCheck()
 {
-	return false;
+	return true;
 }
 
 void RaidSystem::loadDictionary(std::string input)
@@ -188,15 +188,15 @@ void RaidSystem::loadDictionary(std::string input)
 
 bool RaidSystem::calculateStripeSize()
 {
-	std::cout << "\tLoading dictionary" << std::endl;
-	loadDictionary();
-	handle->reset();
-	std::cout << "\tLoading done! Starting the actual calculation" << std::endl;
+	//std::cout << "\tLoading dictionary" << std::endl;
+	//loadDictionary();
+	//handle->reset();
+	//std::cout << "\tLoading done! Starting the actual calculation" << std::endl;
 
-	std::vector<FileReader *> inFiles = handle->getInFiles();
+	//std::vector<FileReader *> inFiles = handle->getInFiles();
 
-	bool found=false;
-	std::vector<std::string> strings;
+	//bool found=false;
+	//std::vector<std::string> strings;
 	handle->estimateStripeSize();
 		/*
 	while (found == false)
@@ -307,9 +307,6 @@ bool RaidSystem::recoverLostImage()
 bool RaidSystem::raidCheck()
 {
 	bool found = false;
-	found = calculateStripeSize();
-	if (found == false)
-		return false;
 	if (raidSystem == Raid_unknown)
 	{
 		std::cout << "Starting with check for complete raid5 or raid1" << std::endl;

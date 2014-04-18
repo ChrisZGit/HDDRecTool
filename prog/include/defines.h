@@ -4,5 +4,6 @@
 #define BUFLENGTH (1024*1024*1024)
 
 #define BLOCKSIZE (1024*1)
+#define CHECKSIZE (128)
 
 #endif

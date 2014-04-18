@@ -1,5 +1,4 @@
 #include <fileHandler.h>
-#include <iomanip>
 
 
 FileHandler::FileHandler(std::string inputFolder, std::string outputFolder)
@@ -29,7 +28,7 @@ FileHandler::FileHandler(std::string inputFolder, std::string outputFolder)
 		std::cerr << "No valid directory or no valid datas in directory" << std::endl;
 		exit(EXIT_FAILURE);
 	}
-	int maxSize = (BUFLENGTH/(imgs.size()+1))*2;
+	int maxSize = (BUFLENGTH/(imgs.size()+1))*2/2;
 	maxSize = maxSize/BLOCKSIZE;
 	maxSize = maxSize*BLOCKSIZE;
 	maxSize = std::min(maxSize,256*1024*1024);
@@ -58,7 +57,7 @@ bool FileHandler::findGoodBlock()
 			{
 				for (unsigned int j = 0; j < inFiles.size(); ++j)
 				{
-					if (inFiles.at(j)->reloadBuffer() == false)
+					if (inFiles.at(j)->asyncReload() == false)
 					{
 						std::cout << "Couldnt find any good Blocks anymore. File end reached." << std::endl;
 						return false;
@@ -75,7 +74,7 @@ bool FileHandler::findGoodBlock()
 		int newBlocks=0;
 		while ((sample = inFiles.at(0)->findFirstNonemptyBlock())==-1)
 		{
-			if (inFiles.at(0)->reloadBuffer() == false)
+			if (inFiles.at(0)->asyncReload() == false)
 			{
 				std::cout << "Couldn't load any good Blocks anymore. Good luck!" << std::endl;
 				return false;
@@ -102,7 +101,7 @@ bool FileHandler::findGoodBlock()
 		{
 			for (size_t i = 0; i < inFiles.size(); ++i)
 			{
-				if (inFiles.at(i)->reloadBuffer() == false)
+				if (inFiles.at(i)->asyncReload() == false)
 				{
 					std::cout << "Couldnt find any good Blocks anymore. File end reached." << std::endl;
 					return false;
@@ -131,9 +130,8 @@ bool FileHandler::estimateStripeSize()
 {
 	auto lambda = [&] (size_t id) -> std::vector<std::pair<size_t, float>>
 	{
-		const int CHECKS = 64*1024*1024;
+		const int CHECKS = 128*1024*1024;
 		std::vector<std::pair<size_t, float>> entropies;
-		std::vector<int> guesses;
 		if (id >= inFiles.size())
 			return entropies;
 		FileReader *me = inFiles.at(id);
@@ -147,46 +145,20 @@ bool FileHandler::estimateStripeSize()
 			{
 				me->setOffset(offset);
 				ent = me->calcEntropyOfCurrentBlock();
-				//std::pair<size_t, float> input((offset+reloads*me->getBufferLength())-63*512, ent);
 				std::pair<size_t, float> input((offset+reloads*me->getBufferLength()), ent);
 				me->setOffset(me->getBlockSize()+offset);
 				entropies.push_back(input);
 				if (entropies.size() >= CHECKS)
 					break;
 			}
-			if (me->reloadBuffer()==false)
+			if (me->asyncReload()==false)
 			{
 				break;
 			}
 			++reloads;
 			std::cout << "Thread: " << id << "\t" << entropies.size() << std::endl;
 		} while (entropies.size() < CHECKS);
-		guesses.push_back(1);
-
-		/*
-		if (id == 0 && entropies.size()>0)
-		{
-			size_t check=0;
-			size_t last = 0;
-			float val = 0.0f;
-			check = entropies.at(0).first;
-			last = entropies.at(0).first;
-			val = entropies.at(0).second;
-			for (unsigned int i = 1; i < entropies.size(); ++i)
-			{
-				auto in = entropies.at(i);
-				if (last+me->getBlockSize() != in.first || 0.05*val > in.second || 2*val < in.second)
-				{
-					std::cout << last+me->getBlockSize() << "\t" << check << "\t" << (float)(last+me->getBlockSize()-check)/1024.0f << "KB\t to next readable Block:\t" << (float)(in.first-check)/1024.0f << "KB" << std::endl;
-					check = in.first;
-					val = in.second;
-				}
-				last = in.first;
-			}
-		}
-		*/
 		std::cout << "Thread: " << id << " finished " << std::endl;
-
 		me->reset();
 		return entropies;
 	};
@@ -215,7 +187,7 @@ bool FileHandler::estimateStripeSize()
 			}
 			if (status == std::future_status::ready)
 			{
-				std::cout << "Thread " << i << "\t pushed" << std::endl;
+			//	std::cout << "Thread " << i << "\t pushed" << std::endl;
 				std::vector<std::pair<size_t,float>> res = futureResults.at(i).get();
 				results.push_back(res);
 			}
@@ -255,7 +227,7 @@ bool FileHandler::estimateStripeSize()
 		for (unsigned int i = 0; i < results.size(); ++i)
 		{
 			size_t currentEdge = results.at(i).at(pointer[i]).second;
-			if (results.at(i).at(pointer[i]).second > 6.0f)
+			if (results.at(i).at(pointer[i]).second > 6.5f)
 			{
 				adressEdges.push_back(results.at(i).at(pointer[i]).first/1024);
 				pointer[i]++;
@@ -298,54 +270,75 @@ bool FileHandler::estimateStripeSize()
 			}
 		}
 	}
+	int counters[9]={};
 	for (auto in : adressEdges)
 	{
 		if (in % 1024 == 0)
 		{
-			std::cout << "1024:\t" << in << std::endl;
+			//std::cout << "1024:\t" << in << std::endl;
+			counters[0] += 1;
 			continue;
 		}
 		if (in % 512 == 0)
 		{
-			std::cout << " 512:\t" << in << std::endl;
+			//std::cout << " 512:\t" << in << std::endl;
+			counters[1] += 1;
 			continue;
 		}
 		if (in % 256 == 0)
 		{
-			std::cout << " 256:\t" << in << std::endl;
+			//std::cout << " 256:\t" << in << std::endl;
+			counters[2] += 1;
 			continue;
 		}
 		if (in % 128 == 0)
 		{
-			std::cout << " 128:\t" << in << std::endl;
+			//std::cout << " 128:\t" << in << std::endl;
+			counters[3] += 1;
 			continue;
 		}
 		if (in % 64 == 0)
 		{
-			std::cout << "  64:\t" << in << std::endl;
+			//std::cout << "  64:\t" << in << std::endl;
+			counters[4] += 1;
 			continue;
 		}
 		if (in % 32 == 0)
 		{
-			std::cout << "  32:\t" << in << std::endl;
+			//std::cout << "  32:\t" << in << std::endl;
+			counters[5] += 1;
 			continue;
 		}
 		if (in % 16 == 0)
 		{
-			std::cout << "  16:\t" << in << std::endl;
+			//std::cout << "  16:\t" << in << std::endl;
+			counters[6] += 1;
 			continue;
 		}
 		if (in % 8 == 0)
 		{
-			std::cout << "   8:\t" << in << std::endl;
+			//std::cout << "   8:\t" << in << std::endl;
+			counters[7] += 1;
 			continue;
 		}
 		if (in % 4 == 0)
 		{
-			std::cout << "   4:\t" << in << std::endl;
+			//std::cout << "   4:\t" << in << std::endl;
+			counters[8] += 1;
 			continue;
 		}
 	}
+	std::cout << "Found:\n";
+	int i = 0;
+	std::cout << "1024:\t" << counters[i++] << std::endl;
+	std::cout << " 512:\t" << counters[i++] << std::endl;
+	std::cout << " 256:\t" << counters[i++] << std::endl;
+	std::cout << " 128:\t" << counters[i++] << std::endl;
+	std::cout << "  64:\t" << counters[i++] << std::endl;
+	std::cout << "  32:\t" << counters[i++] << std::endl;
+	std::cout << "  16:\t" << counters[i++] << std::endl;
+	std::cout << "   8:\t" << counters[i++] << std::endl;
+	std::cout << "   4:\t" << counters[i++] << std::endl;
 	
 	/*
 	while (true)
@@ -530,7 +523,8 @@ bool FileHandler::reloadBuffers()
 	//std::cout << "reload Buffers" << std::endl;
 	for (unsigned int i = 0; i < inFiles.size(); ++i)
 	{
-		if (inFiles.at(i)->reloadBuffer()==false)
+		//if (inFiles.at(i)->reloadBuffer()==false)
+		if (inFiles.at(i)->asyncReload()==false)
 			return false;
 	}
 	return true;
@@ -548,7 +542,7 @@ int FileHandler::findString(std::string seek)
 			found = inFiles.at(i)->findFirstNonemptyBlock();
 			if (found == -1)
 			{
-				eof=inFiles.at(i)->reloadBuffer();
+				eof=inFiles.at(i)->asyncReload();
 			} else
 			{
 				inFiles.at(i)->setOffset(found);
@@ -559,7 +553,7 @@ int FileHandler::findString(std::string seek)
 				}
 				if (inFiles.at(i)->newBlock() == false)
 				{
-					eof=inFiles.at(i)->reloadBuffer();
+					eof=inFiles.at(i)->asyncReload();
 				}
 			}
 			if (eof==false)

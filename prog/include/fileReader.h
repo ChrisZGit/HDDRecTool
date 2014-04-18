@@ -5,6 +5,10 @@
 #include <fstream>
 #include <vector>
 #include <cmath>
+#include <mutex>
+#include <thread>
+#include <future>
+#include <unistd.h>
 
 #include <defines.h>
 
@@ -13,9 +17,16 @@ class FileReader
 private:
 	std::ifstream fs;
 	char *loadBuffer;
+	char *workBuffer;
 	char *block;
+
+	bool localLoad;
+	std::future<void> threadSync;
+	std::mutex localMtx;
+
 	size_t globalAdress;
-	size_t endOfBuf;
+	size_t endOfLoadBuf;
+	size_t endOfWorkBuf;
 	int offset;
 	size_t bufferLength;
 	size_t blockSize;
@@ -25,6 +36,7 @@ public:
 	FileReader();
 	FileReader(std::string inPath, size_t size);
 
+	bool asyncReload();
 	char *getBuffer();
 	size_t getBufferSize();
 	float calcEntropyOfCurrentBlock();

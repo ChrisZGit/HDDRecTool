@@ -9,7 +9,7 @@
 #include <fileHandler.h>
 #include <defines.h>
 
-#define CHECKSIZE 512
+//#define CHECKSIZE 512
 
 enum Raid
 {
