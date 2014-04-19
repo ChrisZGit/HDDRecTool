@@ -16,6 +16,8 @@ public:
 	~FileWriter();
 
 	bool writeToFile(char *buf, size_t size);
+	bool closeFile();
+	std::string getPath();
 
 };
 

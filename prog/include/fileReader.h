@@ -21,7 +21,7 @@ private:
 	char *block;
 
 	bool localLoad;
-	std::future<void> threadSync;
+	std::future<bool> threadSync;
 	std::mutex localMtx;
 
 	size_t globalAdress;

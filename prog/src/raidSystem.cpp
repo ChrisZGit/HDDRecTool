@@ -139,7 +139,7 @@ bool RaidSystem::easyCheck()
 			break;
 		}
 	}
-	std::cout << raid1 << " " << raid5 << " " << misses << std::endl;
+	//std::cout << raid1 << " " << raid5 << " " << misses << std::endl;
 	handle->reset();
 	if (raid1 > (misses+raid5)*1.5)
 	{
@@ -150,6 +150,26 @@ bool RaidSystem::easyCheck()
 		raidSystem = Raid5_complete;
 		return true;
 	}
+	//see if you can find 2 same partitiontables at 2 of all hdds, if so, its raid5_incomplete
+	//otherwise it still can be raid5_inc or raid0
+	std::vector<char *> tables;
+	for (unsigned int i = 0; i < inFiles.size(); ++i)
+	{
+		char *buf = inFiles.at(i)->getBuffer();	
+		if (checkForNull(buf, 512)==false)
+			tables.push_back(buf);
+	}
+	if (tables.size() == 2)
+	{
+		if (checkForEqual(tables.at(0),tables.at(1),512)==true)
+		{
+			lostImages = 1;
+			raidSystem = Raid5_incomplete;
+			handle->reset();
+			return true;
+		}
+	}
+	handle->reset();
 	return false;
 }
 
@@ -158,6 +178,7 @@ bool RaidSystem::intensiveCheck()
 	return true;
 }
 
+//currently not needed anymore
 void RaidSystem::loadDictionary(std::string input)
 {
 	std::fstream in(input.c_str(), std::fstream::in);
@@ -188,89 +209,11 @@ void RaidSystem::loadDictionary(std::string input)
 
 bool RaidSystem::calculateStripeSize()
 {
-	//std::cout << "\tLoading dictionary" << std::endl;
-	//loadDictionary();
-	//handle->reset();
-	//std::cout << "\tLoading done! Starting the actual calculation" << std::endl;
-
-	//std::vector<FileReader *> inFiles = handle->getInFiles();
-
-	//bool found=false;
-	//std::vector<std::string> strings;
-	handle->estimateStripeSize();
-		/*
-	while (found == false)
-	{
-		while (handle->findGoodBlock() == true)
-		{
-			for (unsigned int i = 0; i < inFiles.size(); ++i)
-			{
-				float t = inFiles.at(i)->calcEntropyOfCurrentBlock(); 
-				std::cout << t << std::endl;
-			}
-		}
-		*/
-		/*
-		for (unsigned int i = 0; i < inFiles.size(); ++i)
-		{
-			int adr = inFiles.at(i)->findFirstNonemptyBlock();
-			if (adr != -1)
-			{
-				inFiles.at(i)->setOffset(adr);
-				strings = inFiles.at(i)->getAllStringsInBlock();
-				for (unsigned int j = 0; j < strings.size(); ++j)
-				{
-					size_t pos = std::string::npos;
-					int index=strings.at(j)[0]-65;
-					std::string findMe = strings.at(j);
-					if (index >= 32 && index < 58)
-					{
-						index -= 6;
-						pos = dictionary.at(index).find(findMe);
-					} else if (index >= 0 && index < 26)
-					{
-						pos = dictionary.at(index).find(findMe);
-					}
-					if (!(pos == std::string::npos))
-					{
-						j = strings.size();
-						std::cout << "\tStringblock found. Trying to estimate the stripesize next. " << std::endl;
-						//	inFiles.at(i)->printBlock();
-						//	std::cout << "FOUND: " << findMe << std::endl;
-						std::cout << "\tStripesize couldn't be estimated with current block!" << std::endl;
-					}
-				}
-			}
-		}
-		*/
-		/*
-		   for (unsigned int i = 0; i < dictionary.size(); ++i)
-		   {
-		   hdd=handle->findStringInBlock(dictionary.at(i));
-		   if (hdd != -1)
-		   {
-		   std::cout << "Found\t" << dictionary.at(i) <<  "\tat hdd: " << hdd << std::endl;
-		   }
-		   if (i % 100==0)
-		   {
-		   std::cout << "seeking: " << dictionary.at(i) << std::endl;
-		   }
-		   }
-		 */
-	/*
-		if (handle->reloadBuffers() == false)
-		{
-			//end reached
-			std::cout << "\tEnd of File reached. No good block for the stripesize-estimation was found. Must abort recovery." << std::endl;
-			return false;
-		}
-	}
-	*/
-
-	//std::string tmp = "be install";
-	//int adress = handle->findString(tmp);
-	//std::cout << adress << std::endl;
-	return false;
+	int ret = handle->estimateStripeSize();
+	if (ret == -1)
+		return false;
+	this->stripeSize = ret;
+	return true;
 }
 
 bool RaidSystem::recoverLostImage()
@@ -284,24 +227,43 @@ bool RaidSystem::recoverLostImage()
 		std::cerr << "\tToo many lost Images to recover" << std::endl;
 		return false;
 	}
-	char buf[BUFLENGTH];
-	std::vector<FileReader *> inFiles = handle->getInFiles();
-	for (unsigned int j = 0; j < inFiles.size(); ++j)
-		inFiles.at(j)->reset();
-	while (inFiles.at(0)->getBufferSize() > 0)
+	if (raidSystem == Raid5_incomplete)
 	{
-		for (int i = 0; i < BUFLENGTH; ++i)
+		std::vector<FileReader *> inFiles = handle->getInFiles();
+		size_t bufferlength = inFiles.at(0)->getBufferSize();
+		char *buf = new char[bufferlength];
+		for (unsigned int j = 0; j < inFiles.size(); ++j)
+			inFiles.at(j)->reset();
+		while (true)
 		{
-			for (size_t j = 0; j < inFiles.size(); ++j)
+			for (unsigned int i = 0; i < bufferlength; ++i)
 			{
-				buf[i] = buf[i]^inFiles.at(j)->getBuffer()[i];
+				for (size_t j = 0; j < inFiles.size(); ++j)
+				{
+					buf[i] = buf[i]^inFiles.at(j)->getBuffer()[i];
+				}
+			}
+			handle->getFileWriter()->writeToFile(buf,bufferlength);
+			for (unsigned int j = 0; j < inFiles.size(); ++j)
+			{
+				if (inFiles.at(j)->newBlock()==false)
+				{
+					if (inFiles.at(j)->asyncReload() == false)
+					{
+						handle->getFileWriter()->closeFile();
+						return true;
+					}
+				}
+			}
+			for (unsigned int i = 0; i < bufferlength; ++i)
+			{
+				buf[i] = 0;
 			}
 		}
-		handle->getFileWriter()->writeToFile(buf,BUFLENGTH);
-		for (unsigned int j = 0; j < inFiles.size(); ++j)
-			inFiles.at(j)->newBlock();
+		handle->getFileWriter()->closeFile();
+		return true;
 	}
-	return true;
+	return false;
 }
 
 bool RaidSystem::raidCheck()
@@ -342,7 +304,7 @@ bool RaidSystem::raidCheck()
 				} else
 				{
 					std::cout << "Images missing. Will recover image later!" << std::endl;
-					raidSystem = Raid5_corrupt;
+					raidSystem = Raid5_incomplete;
 				}
 				found = true;
 			} else
@@ -355,7 +317,7 @@ bool RaidSystem::raidCheck()
 			found = true;
 		} else
 		{
-			raidSystem = Raid5_corrupt;
+			raidSystem = Raid5_incomplete;
 			found = true;
 		}
 	} else if (raidSystem == Raid1)
@@ -370,10 +332,17 @@ bool RaidSystem::raidCheck()
 		}
 		found = true;
 	}
+	//raidType almost done
 	if (found == false)
 	{
 		std::cerr << "No valid Raidsystem found! Have to abort!" << std::endl;
 		return false;
+	}
+	if (raidSystem == Raid5_incomplete)
+	{
+		std::cout << "Incomplete Raid5-System. Will recover image and mount it internally." << std::endl;
+		recoverLostImage();
+		handle->addImage(handle->getFileWriter()->getPath());
 	}
 	if (stripeSize == -1)
 	{

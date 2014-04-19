@@ -30,11 +30,12 @@ public:
 	FileHandler(std::string inputFolder, std::string outputFolder);
 
 	void reset();
+	void addImage(std::string path);
 	bool reloadBuffers();
 	int findStringInBlock(std::string seek);
 	int findString(std::string seek);
 	bool findGoodBlock();
-	bool estimateStripeSize();
+	int estimateStripeSize();
 
 	std::vector<FileReader*> getInFiles();
 	FileReader *getFileReader(size_t num);

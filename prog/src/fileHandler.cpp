@@ -1,5 +1,6 @@
 #include <fileHandler.h>
 
+static int maxSize;
 
 FileHandler::FileHandler(std::string inputFolder, std::string outputFolder)
 {
@@ -28,7 +29,7 @@ FileHandler::FileHandler(std::string inputFolder, std::string outputFolder)
 		std::cerr << "No valid directory or no valid datas in directory" << std::endl;
 		exit(EXIT_FAILURE);
 	}
-	int maxSize = (BUFLENGTH/(imgs.size()+1))*2/2;
+	maxSize = (BUFLENGTH/(imgs.size()+1))/2*2;
 	maxSize = maxSize/BLOCKSIZE;
 	maxSize = maxSize*BLOCKSIZE;
 	maxSize = std::min(maxSize,256*1024*1024);
@@ -38,7 +39,25 @@ FileHandler::FileHandler(std::string inputFolder, std::string outputFolder)
 		FileReader *a = new FileReader(imgs.at(i),maxSize);
 		inFiles.push_back(a);
 	}
-	writer = new FileWriter(outFolder+"recoveredImage.dd");
+	writer = new FileWriter(outFolder+"recoveredImage.txt");
+}
+
+void FileHandler::addImage(std::string path)
+{
+	std::cout << path << std::endl;
+	if (inFiles.size()==0)
+	{
+		maxSize = (BUFLENGTH/1+1)/2*2;
+		maxSize = maxSize/BLOCKSIZE;
+		maxSize = maxSize*BLOCKSIZE;
+		maxSize = std::min(maxSize,256*1024*1024);
+		FileReader *a = new FileReader(path,maxSize);
+		inFiles.push_back(a);
+	} else
+	{
+		FileReader *a = new FileReader(path,maxSize);
+		inFiles.push_back(a);
+	}
 }
 
 bool FileHandler::findGoodBlock()
@@ -126,7 +145,7 @@ bool FileHandler::findGoodBlock()
 	return true;
 }
 
-bool FileHandler::estimateStripeSize()
+int FileHandler::estimateStripeSize()
 {
 	auto lambda = [&] (size_t id) -> std::vector<std::pair<size_t, float>>
 	{
@@ -162,6 +181,8 @@ bool FileHandler::estimateStripeSize()
 		me->reset();
 		return entropies;
 	};
+
+	int stripeSize = -1;
 	unsigned int NUM_THREADS = inFiles.size();
 	//std::vector<std::future<int>> futureResults(inFiles.size());
 	//std::vector<int> results;
@@ -487,7 +508,7 @@ bool FileHandler::estimateStripeSize()
 		}
 	}
 	*/
-	return true;
+	return stripeSize;
 }
 
 void FileHandler::reset()

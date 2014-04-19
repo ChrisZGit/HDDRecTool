@@ -16,7 +16,7 @@ enum Raid
 	Raid0=0,
 	Raid1=1,
 	Raid5_user=5,	//this one is only set by user
-	Raid5_corrupt=5,
+	Raid5_incomplete=5,
 	Raid5_complete=5,
 	Raid_unknown
 };

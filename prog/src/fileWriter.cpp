@@ -29,3 +29,17 @@ bool FileWriter::writeToFile(char *buf, size_t size)
 	return true;
 }
 
+bool FileWriter::closeFile()
+{
+	if (fs.is_open())
+	{
+		fs.close();
+	}
+	return true;
+}
+
+std::string FileWriter::getPath()
+{
+	return outPath;
+}
+

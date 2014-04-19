@@ -169,14 +169,15 @@ void FileReader::setBlockSize(size_t blockS)
 
 bool FileReader::asyncReload()
 {
-	auto lambda = [this] () -> void
+	auto lambda = [this] () -> bool
 	{
-		reloadBuffer();
+		bool ret = reloadBuffer();
 		localMtx.lock();
 		localLoad = true;
 		localMtx.unlock();
-		
+		return ret;
 	};
+
 	localMtx.lock();
 	while (localLoad == false)
 	{
@@ -186,13 +187,40 @@ bool FileReader::asyncReload()
 	}
 	localLoad = false;
 	localMtx.unlock();
-	if (fs.bad() || endOfLoadBuf==0 || fs.eof())
+	std::future_status status;
+	if (threadSync.valid())
 	{
-		localMtx.lock();
-		localLoad = true;
-		localMtx.unlock();
-		return false;
+		while (true)
+		{
+			try
+			{
+				status = threadSync.wait_for(std::chrono::milliseconds(20));
+			} catch (std::future_error &e)
+			{
+				continue;
+			}
+			if (status == std::future_status::ready)
+			{
+				break;
+			}
+		}
+		if (threadSync.get()==false || endOfLoadBuf==0 || fs.bad() || fs.eof())
+		{
+			localMtx.lock();
+			localLoad = true;
+			localMtx.unlock();
+			return false;
+		}
 	}
+	/*
+	   if (fs.bad() || endOfLoadBuf==0 || fs.eof())
+	   {
+	   localMtx.lock();
+	   localLoad = true;
+	   localMtx.unlock();
+	   return false;
+	   }
+	 */
 	char *tmp = loadBuffer;
 	loadBuffer = workBuffer;
 	workBuffer = tmp;
@@ -201,8 +229,9 @@ bool FileReader::asyncReload()
 	endOfWorkBuf = endOfLoadBuf;
 	globalAdress += bufferLength;
 
-	threadSync = std::async(std::launch::async, lambda); //even when not used, have to use future object, otherwise the out-of-scope destructor will wait for .get() (therefore no ASYNC LAUNCH ANYMORE)
-	
+	//even when not used, have to use future object, otherwise the out-of-scope destructor will wait for .get() (therefore no ASYNC LAUNCH ANYMORE)
+	threadSync = std::async(std::launch::async, lambda);
+
 	return true;
 }
 
@@ -228,7 +257,7 @@ bool FileReader::reloadBuffer()
 		mtx.lock();
 		loadAvail=true;
 		mtx.unlock();
-	//	std::cerr << "End of File reached" << std::endl;
+		//	std::cerr << "End of File reached" << std::endl;
 		return false;
 	}
 	mtx.lock();
