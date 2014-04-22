@@ -2,7 +2,7 @@
 
 RaidSystem::RaidSystem()
 {
-	std::cerr << "Wrong Constructor" << std::endl;
+	std::cerr << "Wrong Constructor for RaidSystem." << std::endl;
 }
 
 RaidSystem::RaidSystem(FileHandler *fileHandler)
@@ -81,7 +81,7 @@ bool RaidSystem::easyCheck()
 	}
 	if (handle->findGoodBlock() == false)
 	{
-		std::cerr << "\tNo valid readable block found! Image too broken" << std::endl;
+		std::cerr << "\tNo valid readable block found! Image too broken!" << std::endl;
 		return false;
 	}
 
@@ -90,6 +90,7 @@ bool RaidSystem::easyCheck()
 		buf1[j] = 0;
 	}
 
+	std::cout << "\tMake some tests to check if a valid Raid-version can be estimated." << std::endl;
 	for (int count=0; count < 400; ++count)
 	{
 		for (int i = 0; i < 5; ++i)
@@ -139,7 +140,9 @@ bool RaidSystem::easyCheck()
 			break;
 		}
 	}
-	//std::cout << raid1 << " " << raid5 << " " << misses << std::endl;
+	std::cout << "\tHits for Raid1: " << raid1 << std::endl;
+	std::cout << "\tHits for Raid5: " << raid5 << std::endl;
+	std::cout << "\tMisses: " << misses << std::endl;
 	handle->reset();
 	if (raid1 > (misses+raid5)*1.5)
 	{
@@ -358,6 +361,7 @@ bool RaidSystem::raidCheck()
 		std::cout << "Stripesize: " << stripeSize << std::endl;
 	} else
 	{
+		std::cerr << "No valid Stripesize found. User should estimate it on its own, or Image could not be recovered." << std::endl;
 		return false;
 	}
 	return found;
