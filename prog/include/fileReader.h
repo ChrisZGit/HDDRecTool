@@ -27,6 +27,7 @@ private:
 	size_t globalAdress;
 	size_t endOfLoadBuf;
 	size_t endOfWorkBuf;
+	bool bufferReady;
 	int offset;
 	size_t bufferLength;
 	size_t blockSize;
@@ -49,7 +50,7 @@ public:
 	int findString(std::string seek);
 	bool skipInputBuffer(int NumOfBuffers);
 	void setBlockSize(size_t blockS);
-	size_t getBufferLength() {return bufferLength;}
+	size_t getBufferLength() {return std::min(bufferLength,endOfWorkBuf);}
 	size_t getBlockSize() {return blockSize;}
 	void setOffset(size_t in);
 	int findFirstNonemptyBlock(int add=0);

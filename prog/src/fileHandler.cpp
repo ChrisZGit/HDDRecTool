@@ -44,7 +44,6 @@ FileHandler::FileHandler(std::string inputFolder, std::string outputFolder)
 
 void FileHandler::addImage(std::string path)
 {
-	std::cout << path << std::endl;
 	if (inFiles.size()==0)
 	{
 		maxSize = (BUFLENGTH/1+1)/2*2;
@@ -164,7 +163,7 @@ int FileHandler::estimateStripeSize()
 			{
 				me->setOffset(offset);
 				ent = me->calcEntropyOfCurrentBlock();
-				std::pair<size_t, float> input((offset+reloads*me->getBufferLength()), ent);
+				std::pair<size_t, float> input((offset+reloads*me->getBufferLength())/1024, ent);
 				me->setOffset(me->getBlockSize()+offset);
 				entropies.push_back(input);
 				if (entropies.size() >= CHECKS)
@@ -226,7 +225,7 @@ int FileHandler::estimateStripeSize()
 	{
 		files[i] = inFiles.at(i);
 		pointer[i] = 0;
-		while (results.at(i).at(pointer[i]).first < 1024*1024)
+		while (results.at(i).at(pointer[i]).first < 1024)
 		{
 			++pointer[i];
 		}
@@ -250,13 +249,13 @@ int FileHandler::estimateStripeSize()
 			size_t currentEdge = results.at(i).at(pointer[i]).second;
 			if (results.at(i).at(pointer[i]).second > 6.5f)
 			{
-				adressEdges.push_back(results.at(i).at(pointer[i]).first/1024);
+				adressEdges.push_back(results.at(i).at(pointer[i]).first);
 				pointer[i]++;
 				if (pointer[i] >= results.at(i).size())
 				{
 					break;
 				}
-				while (results.at(i).at(pointer[i]).first-files[i]->getBlockSize() == results.at(i).at(pointer[i]-1).first)
+				while (results.at(i).at(pointer[i]).first-files[i]->getBlockSize()/1024 == results.at(i).at(pointer[i]-1).first)
 				{
 					pointer[i]++;
 					if (pointer[i] >= results.at(i).size())
@@ -268,7 +267,7 @@ int FileHandler::estimateStripeSize()
 				{
 					break;
 				}
-				adressEdges.push_back((results.at(i).at(pointer[i]).first + files[i]->getBlockSize())/1024 );
+				adressEdges.push_back((results.at(i).at(pointer[i]).first + files[i]->getBlockSize()/1024));
 			} else
 			{
 				pointer[i]++;
@@ -276,7 +275,7 @@ int FileHandler::estimateStripeSize()
 				{
 					break;
 				}
-				while (results.at(i).at(pointer[i]).first-files[i]->getBlockSize() == results.at(i).at(pointer[i]-1).first)
+				while (results.at(i).at(pointer[i]).first-files[i]->getBlockSize()/1024 == results.at(i).at(pointer[i]-1).first)
 				{
 					pointer[i]++;
 					if (pointer[i] >= results.at(i).size())
@@ -350,18 +349,29 @@ int FileHandler::estimateStripeSize()
 		}
 	}
 	std::cout << "Found:\n";
-	int i = 0;
-	std::cout << "1024:\t" << counters[i++] << std::endl;
-	std::cout << " 512:\t" << counters[i++] << std::endl;
-	std::cout << " 256:\t" << counters[i++] << std::endl;
-	std::cout << " 128:\t" << counters[i++] << std::endl;
-	std::cout << "  64:\t" << counters[i++] << std::endl;
-	std::cout << "  32:\t" << counters[i++] << std::endl;
-	std::cout << "  16:\t" << counters[i++] << std::endl;
-	std::cout << "   8:\t" << counters[i++] << std::endl;
-	std::cout << "   4:\t" << counters[i++] << std::endl;
+	int x = 0;
+	std::cout << "1024:\t" << counters[x++] << std::endl;
+	std::cout << " 512:\t" << counters[x++] << std::endl;
+	std::cout << " 256:\t" << counters[x++] << std::endl;
+	std::cout << " 128:\t" << counters[x++] << std::endl;
+	std::cout << "  64:\t" << counters[x++] << std::endl;
+	std::cout << "  32:\t" << counters[x++] << std::endl;
+	std::cout << "  16:\t" << counters[x++] << std::endl;
+	std::cout << "   8:\t" << counters[x++] << std::endl;
+	std::cout << "   4:\t" << counters[x++] << std::endl;
 	
 	/*
+	for (unsigned int i = 0; i < results.size(); ++i)
+	{
+		files[i] = inFiles.at(i);
+		files[i]->reset();
+		pointer[i] = 0;
+		while (results.at(i).at(pointer[i]).first < 1024)
+		{
+			++pointer[i];
+		}
+	}
+	lastAdress=0;
 	while (true)
 	{
 		bool killMe = false;
@@ -375,139 +385,43 @@ int FileHandler::estimateStripeSize()
 		}
 		if (killMe == true)
 			break;
-		bool aligned=true;
-		size_t currentLowest=0xFFFFFFFF;
-		while (aligned == true)
+		size_t currentLowest = -1;
+		for (unsigned int i = 0; i < results.size(); ++i)
 		{
-			for (unsigned int i = 0; i < results.size(); ++i)
-			{
-				if (pointer[i] >= results.at(i).size())
-				{
-					killMe = true;
-					break;
-				}
-			}
-			if (killMe == true)
-			{
-				break;
-			}
-			for (unsigned int i = 0; i < results.size(); ++i)
-			{
-				lowest[i] = results.at(i).at(pointer[i]).first;
-				currentLowest = std::min(currentLowest,lowest[i]);
-			}
-			for (unsigned int i = 0; i < results.size(); ++i)
-			{
-				if(currentLowest != lowest[i])
-				{
-					aligned = false; 
-					break;
-				}
-			}
-			if ((currentLowest-lastAdress)/1024 < 100)
-			{
-				lastAdress = lastAdress+inFiles.at(0)->getBlockSize();
-				for (;lastAdress < currentLowest; lastAdress += inFiles.at(0)->getBlockSize())
-				{
-					std::cout << std::setw(10) << lastAdress/1024 << "\t";
-					for (unsigned int i = 0; i < results.size(); ++i)
-					{
-						std::cout << std::setw(10) << "0.00000\t"; 
-					}
-					std::cout << std::endl;
-				}
-			}
-			else
-			{
-				std::cout << std::endl;
-			}
-			if (aligned == true)
-			{
-				lastAdress = currentLowest;
-				std::cout << std::setw(10) << lowest[0]/1024 << "\t";
-				for (unsigned int i = 0; i < results.size(); ++i)
-				{
-					if (results.at(i).at(pointer[i]).second == 0.0f)
-					{
-						std::cout << std::setw(10) << "0.00000\t";
-					} else
-					{
-						std::cout << std::setw(10) << (float)results.at(i).at(pointer[i]).second << "\t"; 
-					}
-					pointer[i]++;
-				}
-				std::cout << std::endl;
-			}
+			size_t low = results.at(i).at(pointer[i]).first;
+			currentLowest = std::min(currentLowest,low);
 		}
-		while (aligned == false)
+		if (lastAdress + 32 < currentLowest)
 		{
+			lastAdress = currentLowest-32;
+		}
+		for (; lastAdress < currentLowest; lastAdress += inFiles.at(0)->getBlockSize()/1024)
+		{
+			std::cout << std::setw(10) << lastAdress << "\t";
 			for (unsigned int i = 0; i < results.size(); ++i)
 			{
-				if (pointer[i] >= results.at(i).size())
-				{
-					killMe = true;
-					break;
-				}
+				std::cout << std::setw(10) << "0.00000\t"; 
 			}
-			if (killMe == true)
-			{
-				break;
-			}
-			currentLowest = 0xFFFFFFFF;
-			for (unsigned int i = 0; i < results.size(); ++i)
-			{
-				lowest[i] = results.at(i).at(pointer[i]).first;
-				currentLowest = std::min(currentLowest,lowest[i]);
-			}
-			aligned = true;
-			for (unsigned int i = 0; i < results.size(); ++i)
-			{
-				if(currentLowest != lowest[i])
-				{
-					aligned = false; 
-					break;
-				}
-			}
-			if (aligned == true)
-				break;
-			if ((currentLowest-lastAdress)/1024 < 100)
-			{
-				lastAdress = lastAdress+inFiles.at(0)->getBlockSize();
-				for (;lastAdress < currentLowest; lastAdress += inFiles.at(0)->getBlockSize())
-				{
-					std::cout << std::setw(10) << lastAdress/1024 << "\t";
-					for (unsigned int i = 0; i < results.size(); ++i)
-					{
-						std::cout << std::setw(10) << "0.00000\t"; 
-					}
-					std::cout << std::endl;
-				}
-			}
-			else
-			{
-				std::cout << std::endl;
-			}
-			std::cout << std::setw(10) << currentLowest/1024 << "\t";
-			for (unsigned int i = 0; i < results.size(); ++i)
-			{
-				if (results.at(i).at(pointer[i]).first > currentLowest)
-				{
-					std::cout << std::setw(10) << "0.00000\t"; 
-				} else if (results.at(i).at(pointer[i]).second == 0.0f)
-				{
-					std::cout << std::setw(10) << "0.00000\t";
-					pointer[i]++;
-				} else
-				{
-					std::cout << std::setw(10) << (float)results.at(i).at(pointer[i]).second << "\t"; 
-					pointer[i]++;
-				}
-			}
-			lastAdress = currentLowest;
 			std::cout << std::endl;
 		}
+		std::cout << std::setw(10) << currentLowest << "\t";
+		for (unsigned int i = 0; i < results.size(); ++i)
+		{
+			if (results.at(i).at(pointer[i]).first > currentLowest)
+			{
+				std::cout << std::setw(10) << "0.00000\t";
+				std::cout << std::setw(10) << results.at(i).at(pointer[i]).first << "\t\t"; 
+			} else
+			{
+				std::cout << std::setw(10) << (float)results.at(i).at(pointer[i]).second << "\t"; 
+				std::cout << std::setw(10) << results.at(i).at(pointer[i]).first << "\t\t"; 
+				pointer[i]++;
+			}
+		}
+		std::cout << std::endl;
+		lastAdress = currentLowest + inFiles.at(0)->getBlockSize();
 	}
-	*/
+		*/
 	return stripeSize;
 }
 

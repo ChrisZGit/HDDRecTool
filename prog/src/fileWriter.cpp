@@ -18,7 +18,7 @@ bool FileWriter::writeToFile(char *buf, size_t size)
 		fs.open(outPath.c_str(), std::fstream::out);
 		if (fs == NULL)
 		{
-			std::cerr << "ERROR FileReader::FileReader - Couldnt open file: " << outPath << std::endl;
+			std::cerr << "ERROR FileWriter::FileWriter - Couldnt open file: " << outPath << std::endl;
 		}
 		init = false;
 	}

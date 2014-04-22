@@ -20,7 +20,7 @@ int main(int argc, char *argv[])
 
 	bool in = false;
 	bool out = false;
-	for (int i = 1; i < argc-1; i++)
+	for (int i = 1; i < argc-1; i=i+1)
 	{
 		std::string input = argv[i];
 		if (input.compare("-p") == 0)
@@ -68,7 +68,6 @@ int main(int argc, char *argv[])
 
 	if (!(inPath.at(inPath.size()-1) == '/'))
 		inPath+="/";
-	outPath = argv[2];
 	if (!(outPath.at(outPath.size()-1) == '/'))
 		outPath += "/";
 

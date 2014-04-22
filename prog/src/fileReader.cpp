@@ -144,19 +144,6 @@ int FileReader::findString(std::string seek)
 bool FileReader::skipInputBuffer(int NumOfBuffers)
 {
 	std::cout << "Skipping buffer for " << path << std::endl;
-	/*
-	if (fs.is_open() && fs.good() && !(fs.eof()))
-	{
-		fs.seekg((NumOfBuffers-1)*bufferLength + fs.tellg());
-		endOfWorkBuf = fs.readsome((char *)workBuffer, bufferLength);
-		offset = 0;
-	} 
-	if (fs.bad() || endOfWorkBuf==0 || fs.eof())
-	{
-		std::cerr << "End of File reached" << std::endl;
-		return false;
-	}
-	*/
 	for (int i = 0; i < NumOfBuffers; ++i)
 		asyncReload();
 	return true;
@@ -186,12 +173,13 @@ bool FileReader::asyncReload()
 		localMtx.lock();
 	}
 	localLoad = false;
-	localMtx.unlock();
+	//localMtx.unlock();
 	std::future_status status;
 	if (threadSync.valid())
 	{
 		while (true)
 		{
+			localMtx.unlock();
 			try
 			{
 				status = threadSync.wait_for(std::chrono::milliseconds(20));
@@ -203,10 +191,10 @@ bool FileReader::asyncReload()
 			{
 				break;
 			}
+			localMtx.lock();
 		}
 		if (threadSync.get()==false || endOfLoadBuf==0 || fs.bad() || fs.eof())
 		{
-			localMtx.lock();
 			localLoad = true;
 			localMtx.unlock();
 			return false;
@@ -221,6 +209,13 @@ bool FileReader::asyncReload()
 	   return false;
 	   }
 	 */
+	mtx.lock();
+	while (loadAvail == false)
+	{
+		mtx.unlock();
+		usleep(100*5);
+		mtx.lock();
+	}
 	char *tmp = loadBuffer;
 	loadBuffer = workBuffer;
 	workBuffer = tmp;
@@ -228,6 +223,11 @@ bool FileReader::asyncReload()
 	offset = 0;
 	endOfWorkBuf = endOfLoadBuf;
 	globalAdress += bufferLength;
+	mtx.unlock();
+	//std::cout << globalAdress << "\t" << endOfWorkBuf << std::endl;
+
+	localLoad = false;
+	localMtx.unlock();
 
 	//even when not used, have to use future object, otherwise the out-of-scope destructor will wait for .get() (therefore no ASYNC LAUNCH ANYMORE)
 	threadSync = std::async(std::launch::async, lambda);
@@ -270,7 +270,7 @@ bool FileReader::reloadBuffer()
 bool FileReader::newBlock()
 {
 	offset += blockSize;
-	if (offset+blockSize >= endOfWorkBuf)
+	if (offset+blockSize > endOfWorkBuf)
 	{
 		offset -= blockSize;
 		return false;

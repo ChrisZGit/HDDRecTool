@@ -82,7 +82,7 @@ bool RaidSystem::easyCheck()
 	if (handle->findGoodBlock() == false)
 	{
 		std::cerr << "\tNo valid readable block found! Image too broken!" << std::endl;
-		return false;
+		//return false;
 	}
 
 	for (int j = 0; j < CHECKSIZE; ++j)
@@ -233,36 +233,45 @@ bool RaidSystem::recoverLostImage()
 	if (raidSystem == Raid5_incomplete)
 	{
 		std::vector<FileReader *> inFiles = handle->getInFiles();
-		size_t bufferlength = inFiles.at(0)->getBufferSize();
+		size_t bufferlength = inFiles.at(0)->getBufferLength();
+		size_t blocklength = inFiles.at(0)->getBlockSize();
+		double written = 0.0f;
+		size_t runs=0;
 		char *buf = new char[bufferlength];
 		for (unsigned int j = 0; j < inFiles.size(); ++j)
 			inFiles.at(j)->reset();
 		while (true)
 		{
-			for (unsigned int i = 0; i < bufferlength; ++i)
-			{
-				for (size_t j = 0; j < inFiles.size(); ++j)
-				{
-					buf[i] = buf[i]^inFiles.at(j)->getBuffer()[i];
-				}
-			}
-			handle->getFileWriter()->writeToFile(buf,bufferlength);
-			for (unsigned int j = 0; j < inFiles.size(); ++j)
-			{
-				if (inFiles.at(j)->newBlock()==false)
-				{
-					if (inFiles.at(j)->asyncReload() == false)
-					{
-						handle->getFileWriter()->closeFile();
-						return true;
-					}
-				}
-			}
+			bufferlength = inFiles.at(0)->getBufferLength();
 			for (unsigned int i = 0; i < bufferlength; ++i)
 			{
 				buf[i] = 0;
 			}
+			++runs;
+			for (size_t j = 0; j < inFiles.size(); ++j)
+			{
+				FileReader *reader = inFiles.at(j);
+				char *read = reader->getBuffer();
+				for (unsigned int i = 0; i < bufferlength; ++i)
+				{
+					buf[i] = buf[i]^read[i];
+				}
+			}
+			handle->getFileWriter()->writeToFile(buf,bufferlength);
+			written += bufferlength/1024.0f/1024.0f;
+			printf("\r%f MB finished", written);
+			fflush(stdout);
+			for (unsigned int j = 0; j < inFiles.size(); ++j)
+			{
+				if (inFiles.at(j)->asyncReload() == false)
+				{
+					handle->getFileWriter()->closeFile();
+					std::cout << std::endl;
+					return true;
+				}
+			}
 		}
+		std::cout << std::endl;
 		handle->getFileWriter()->closeFile();
 		return true;
 	}
