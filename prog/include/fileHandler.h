@@ -36,6 +36,7 @@ public:
 	int findString(std::string seek);
 	bool findGoodBlock();
 	int estimateStripeSize();
+	std::vector<std::pair<int,bool>> estimateStripeMap();
 
 	std::vector<FileReader*> getInFiles();
 	FileReader *getFileReader(size_t num);

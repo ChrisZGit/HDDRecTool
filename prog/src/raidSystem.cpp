@@ -176,12 +176,13 @@ bool RaidSystem::easyCheck()
 	return false;
 }
 
+//currently not needed
 bool RaidSystem::intensiveCheck()
 {
 	return true;
 }
 
-//currently not needed anymore
+//currently not needed
 void RaidSystem::loadDictionary(std::string input)
 {
 	std::fstream in(input.c_str(), std::fstream::in);
@@ -288,8 +289,8 @@ bool RaidSystem::raidCheck()
 		if (found == false)
 		{
 			std::cout << "FAILED!\n Now the intensive check to estimate the raid version begins." << std::endl;
-			found = intensiveCheck();
-			if (found == false)
+			//found = intensiveCheck();
+		/*	if (found == false)
 			{
 				std::cout << "FAILED!\n Intensive check delivers no result. Aborting the analysis." << std::endl;
 				return false;
@@ -297,6 +298,7 @@ bool RaidSystem::raidCheck()
 			{
 				std::cout << "Found a valid Raidsystem with intensive check: " << raidSystem << std::endl;
 			}
+		*/
 		} else 
 		{
 			std::cout << "Found a raid version with the easy check: " << raidSystem  << std::endl;
@@ -344,8 +346,13 @@ bool RaidSystem::raidCheck()
 		}
 		found = true;
 	}
+
 	//raidType almost done
-	if (found == false)
+	if (found == false && raidSystem == Raid_unknown)
+	{
+		//do nothing, but check later
+	}
+	else if (found == false)
 	{
 		std::cerr << "No valid Raidsystem found! Have to abort!" << std::endl;
 		return false;
@@ -356,6 +363,8 @@ bool RaidSystem::raidCheck()
 		recoverLostImage();
 		handle->addImage(handle->getFileWriter()->getPath());
 	}
+
+	//estimate the stripesize
 	if (stripeSize == -1)
 	{
 		std::cout << "No stripesize specified! Trying to calculate Stripesize now." << std::endl;
@@ -373,6 +382,26 @@ bool RaidSystem::raidCheck()
 		std::cerr << "No valid Stripesize found. User should estimate it on its own, or Image could not be recovered." << std::endl;
 		return false;
 	}
+
+	//estimate Stripemap beyond this point
+	//raidversion and stripesize must be known at this point!
+
+	// Datatype: std::vector<std::pair<int, bool>>
+	// int: tells how the stripes are written (data and paritiy are handled seperately)
+	// bool: if its parity or not (1 = Parity)
+	// Example:
+	//	0,0		1,0		0,1
+	//	1,1		2,0		3,0
+	//	4,0		2,1		5,0
+	
+	std::vector<std::pair<int, bool>> stripeMap;
+	stripeMap = handle->estimateStripeMap();
+
+	if (raidSystem == Raid_unknown)
+	{
+		//check if vector full with parity. if not, we have raid0. else we have raid5_in
+	}
+
 	return found;
 }
 

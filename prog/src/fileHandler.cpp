@@ -425,6 +425,23 @@ int FileHandler::estimateStripeSize()
 	return stripeSize;
 }
 
+std::vector<std::pair<int,bool>> FileHandler::estimateStripeMap()
+{
+	// Datastructure:
+	// int: enumeration
+	// bool: 0 = data; 1 = parity;
+	// Example:
+	//	0,0		1,0		0,1
+	//	1,1		3,0		2,0
+	//	5,0		2,1		4,0
+
+	std::vector<std::pair<int,bool>> stripeMap;
+	
+
+
+	return stripeMap;
+}
+
 void FileHandler::reset()
 {
 	for (unsigned int i = 0; i < inFiles.size(); ++i)
