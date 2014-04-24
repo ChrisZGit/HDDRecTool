@@ -29,15 +29,15 @@ public:
 	FileHandler();
 	FileHandler(std::string inputFolder, std::string outputFolder);
 
-	void reset();
 	void addImage(std::string path);
-	bool reloadBuffers();
-	int findStringInBlock(std::string seek);
-	int findString(std::string seek);
 	bool findGoodBlock();
 	int estimateStripeSize();
 	std::vector<std::pair<int,bool>> estimateStripeMap();
-
+	void reset();
+	int findStringInBlock(std::string seek);
+	bool reloadBuffers();
+	int findString(std::string seek);
+	
 	std::vector<FileReader*> getInFiles();
 	FileReader *getFileReader(size_t num);
 	FileWriter *getFileWriter();

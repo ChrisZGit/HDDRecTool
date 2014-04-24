@@ -107,6 +107,19 @@ std::vector<std::string> FileReader::getAllStringsInBlock()
 	return ret;
 }
 
+int FileReader::findString(std::string seek)
+{
+	std::string tmp;
+	tmp.assign((char *)block, blockSize);
+	size_t ret = tmp.find(seek);
+	if (ret == std::string::npos)
+	{
+		return -1;
+	}
+	std::cout << globalAdress + offset + ret << "\tat\t" << path << std::endl;
+	return (int (globalAdress+offset+ret));
+}
+
 void FileReader::setOffset(size_t off)
 {
 	offset=off;
@@ -126,19 +139,6 @@ int FileReader::findFirstNonemptyBlock(int add)
 		}
 	}
 	return -1;
-}
-
-int FileReader::findString(std::string seek)
-{
-	std::string tmp;
-	tmp.assign((char *)block, blockSize);
-	size_t ret = tmp.find(seek);
-	if (ret == std::string::npos)
-	{
-		return -1;
-	}
-	std::cout << globalAdress + offset + ret << "\tat\t" << path << std::endl;
-	return (int (globalAdress+offset+ret));
 }
 
 bool FileReader::skipInputBuffer(int NumOfBuffers)

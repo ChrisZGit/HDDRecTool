@@ -291,6 +291,7 @@ int FileHandler::estimateStripeSize()
 		}
 	}
 	int counters[9]={};
+	int value[9] = {1024, 512, 256, 128, 64, 32, 16, 8, 4};
 	for (auto in : adressEdges)
 	{
 		if (in % 1024 == 0)
@@ -360,6 +361,33 @@ int FileHandler::estimateStripeSize()
 	std::cout << "   8:\t" << counters[x++] << std::endl;
 	std::cout << "   4:\t" << counters[x++] << std::endl;
 	
+	int tmp1 = 0, tmp2 = 0;
+	for (int i = 0; i < 9; i++)
+	{
+		if(counters[i] > tmp1)
+		{
+			tmp1 = counters[i];
+			tmp2 = value[i];
+		}
+	}
+	char answer;
+	std::cout << "Estimated Stripesize: " << tmp2 << std::endl;
+	std::cout << "It's just with simple heuristic. Would you like to continue with this result?" << std::endl;
+	std::cout << "Answer with 'y' for 'yes', 'n' for 'no' or 'h' for 'hint'" [y/n/h] ";
+	std::cin >> answer;
+	if (answer == 'y')
+	{
+		stripeSize = tmp2;
+	}
+	else if (answer == 'n')
+	{
+		std::cout << "With which stripesize do you wish to continue? [1-1024] (in kB) ";
+		std::cin >> stripeSize;
+	}
+	else
+	{
+		std::cout << "Try a bigger BlockSize in 'include/defines.h'. Maybe, the heuristic works better than. Otherwise you have to estimate it on your own." << std::endl;
+	}
 	/*
 	for (unsigned int i = 0; i < results.size(); ++i)
 	{

@@ -20,6 +20,11 @@ Raid RaidSystem::getRaid()
 	return raidSystem;
 }
 
+size_t RaidSystem::getStripeSize()
+{
+	return stripeSize;
+}
+
 void RaidSystem::setStripeSize(int i)
 {
 	stripeSize = i;
@@ -177,11 +182,12 @@ bool RaidSystem::easyCheck()
 }
 
 //currently not needed
+/*
 bool RaidSystem::intensiveCheck()
 {
 	return true;
 }
-
+*/
 //currently not needed
 void RaidSystem::loadDictionary(std::string input)
 {
@@ -393,7 +399,7 @@ bool RaidSystem::raidCheck()
 	//	0,0		1,0		0,1
 	//	1,1		2,0		3,0
 	//	4,0		2,1		5,0
-	
+	std::cout << "Trying to estimate the stripemap." << std::endl;
 	std::vector<std::pair<int, bool>> stripeMap;
 	stripeMap = handle->estimateStripeMap();
 

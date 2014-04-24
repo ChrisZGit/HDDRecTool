@@ -37,25 +37,25 @@ public:
 	FileReader();
 	FileReader(std::string inPath, size_t size);
 
-	bool asyncReload();
+	size_t getBufferLength() {return std::min(bufferLength,endOfWorkBuf);}
+	size_t getBlockSize() {return blockSize;}
+
 	char *getBuffer();
 	size_t getBufferSize();
 	float calcEntropyOfCurrentBlock();
 	bool emptyBlock();
 	void printBlock();
 
-	bool endOfImage();
+//	bool endOfImage();
 	
 	std::vector<std::string> getAllStringsInBlock();
 	int findString(std::string seek);
-	bool skipInputBuffer(int NumOfBuffers);
-	void setBlockSize(size_t blockS);
-	size_t getBufferLength() {return std::min(bufferLength,endOfWorkBuf);}
-	size_t getBlockSize() {return blockSize;}
 	void setOffset(size_t in);
 	int findFirstNonemptyBlock(int add=0);
+	bool skipInputBuffer(int NumOfBuffers);
+	void setBlockSize(size_t blockS);
+	bool asyncReload();
 	bool reloadBuffer();
-
 	bool newBlock();
 	void reset();
 };
