@@ -75,8 +75,8 @@ bool RaidSystem::easyCheck()
 	char buf5[CHECKSIZE];
 	char *checkAgainstMe;
 	char *in;
-	int startAdress = 0;
-	int raid1=0, raid5=0, misses=0;
+	unsigned int startAdress = 0;
+	unsigned int raid1=0, raid5=0, misses=0;
 
 	std::vector<FileReader *> inFiles = handle->getInFiles();
 	if(inFiles.size() < 2)
@@ -96,7 +96,7 @@ bool RaidSystem::easyCheck()
 	}
 
 	std::cout << "\tMake some tests to check if a valid Raid-version can be estimated." << std::endl;
-	for (int count=0; count < 400; ++count)
+	for (int count=0; count < 40000; ++count)
 	{
 		for (int i = 0; i < 5; ++i)
 		{
@@ -152,10 +152,12 @@ bool RaidSystem::easyCheck()
 	if (raid1 > (misses+raid5)*1.5)
 	{
 		raidSystem = Raid1;
+		std::cout << "Found a raid version with the easy check: 1" << std::endl;
 		return true;
 	} else if (raid5 > (misses+raid1)*1.5 && inFiles.size() >= 3)
 	{
 		raidSystem = Raid5_complete;
+		std::cout << "Found a raid version with the easy check: 5 complete" << std::endl;
 		return true;
 	}
 	//see if you can find 2 same partitiontables at 2 of all hdds, if so, its raid5_incomplete
@@ -173,11 +175,32 @@ bool RaidSystem::easyCheck()
 		{
 			lostImages = 1;
 			raidSystem = Raid5_incomplete;
+			std::cout << "Found a raid version with the easy check: 5 incomplete" << std::endl;
 			handle->reset();
 			return true;
 		}
 	}
-	handle->reset();
+	if (raid1 < (100/(inFiles.size()+1))*misses && raid1 > 0.007*(float)misses)
+	{
+		lostImages = 1;
+		raidSystem = Raid5_incomplete;
+		std::cout << "Found a raid version with the easy check: 5 incomplete" << std::endl;
+		handle->reset();
+		return true;
+	}
+	else if (raid1 > (100/(inFiles.size()+1))*misses)
+	{
+		raidSystem = Raid1;
+		std::cout << "Found a raid version with the easy check: 1" << std::endl;
+		return true;
+	}
+	else
+	{
+		raidSystem = Raid0;
+		std::cout << "Found a raid version with the easy check: 0" << std::endl;
+		return true;
+	}
+//	handle->reset();
 	return false;
 }
 
@@ -237,11 +260,13 @@ bool RaidSystem::recoverLostImage()
 		std::cerr << "\tToo many lost Images to recover" << std::endl;
 		return false;
 	}
+	std::vector<FileReader *> inFiles = handle->getInFiles();
+	for (unsigned int j = 0; j < inFiles.size(); ++j)
+		inFiles.at(j)->reset();
 	if (raidSystem == Raid5_incomplete)
 	{
-		std::vector<FileReader *> inFiles = handle->getInFiles();
 		size_t bufferlength = inFiles.at(0)->getBufferLength();
-		size_t blocklength = inFiles.at(0)->getBlockSize();
+//		size_t blocklength = inFiles.at(0)->getBlockSize();
 		double written = 0.0f;
 		size_t runs=0;
 		char *buf = new char[bufferlength];
@@ -274,14 +299,20 @@ bool RaidSystem::recoverLostImage()
 				{
 					handle->getFileWriter()->closeFile();
 					std::cout << std::endl;
+					for (unsigned int t = 0; t < inFiles.size(); ++t)
+						inFiles.at(t)->reset();
 					return true;
 				}
 			}
 		}
 		std::cout << std::endl;
 		handle->getFileWriter()->closeFile();
+		for (unsigned int j = 0; j < inFiles.size(); ++j)
+			inFiles.at(j)->reset();
 		return true;
 	}
+	for (unsigned int j = 0; j < inFiles.size(); ++j)
+		inFiles.at(j)->reset();
 	return false;
 }
 
@@ -290,24 +321,22 @@ bool RaidSystem::raidCheck()
 	bool found = false;
 	if (raidSystem == Raid_unknown)
 	{
-		std::cout << "Starting with check for complete raid5 or raid1" << std::endl;
+		std::cout << "Starting with Raid check." << std::endl;
 		found = easyCheck();
 		if (found == false)
 		{
 			std::cout << "FAILED!\n Now the intensive check to estimate the raid version begins." << std::endl;
-			//found = intensiveCheck();
-		/*	if (found == false)
-			{
-				std::cout << "FAILED!\n Intensive check delivers no result. Aborting the analysis." << std::endl;
-				return false;
-			} else 
-			{
-				std::cout << "Found a valid Raidsystem with intensive check: " << raidSystem << std::endl;
-			}
-		*/
 		} else 
 		{
-			std::cout << "Found a raid version with the easy check: " << raidSystem  << std::endl;
+			char answer;
+			std::cout << "Do you want to accept this? [y/n]";
+			std::cin >> answer;
+			if (answer == 'n')
+			{
+				std::cout << "Raid Version can not be estimated automatically. Must be handed over with the program start." << std::endl;
+				return false;
+			}
+			//std::cout << "Found a raid version with the easy check: 5" << raidSystem  << std::endl;
 		}
 	} else if (raidSystem == Raid5_user)
 	{
@@ -354,11 +383,7 @@ bool RaidSystem::raidCheck()
 	}
 
 	//raidType almost done
-	if (found == false && raidSystem == Raid_unknown)
-	{
-		//do nothing, but check later
-	}
-	else if (found == false)
+	if (found == false)
 	{
 		std::cerr << "No valid Raidsystem found! Have to abort!" << std::endl;
 		return false;
@@ -389,12 +414,9 @@ bool RaidSystem::raidCheck()
 		return false;
 	}
 
-	//estimate Stripemap beyond this point
-	//raidversion and stripesize must be known at this point!
-
 	// Datatype: std::vector<std::pair<int, bool>>
 	// int: tells how the stripes are written (data and paritiy are handled seperately)
-	// bool: if its parity or not (1 = Parity)
+	// bool: if its parity or not (true = Parity)
 	// Example:
 	//	0,0		1,0		0,1
 	//	1,1		2,0		3,0
@@ -403,9 +425,17 @@ bool RaidSystem::raidCheck()
 	std::vector<std::pair<int, bool>> stripeMap;
 	stripeMap = handle->estimateStripeMap();
 
-	if (raidSystem == Raid_unknown)
+	//if stripeMap valid, basst
+	//else return false
+	
+	if (stripeMap.size() == 0)
 	{
-		//check if vector full with parity. if not, we have raid0. else we have raid5_in
+		std::cerr << "No valid Stripemap found. Has to abort Recovery." << std::endl;
+		return false;
+	}
+	else
+	{
+		found = true;
 	}
 
 	return found;

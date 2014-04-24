@@ -18,9 +18,9 @@ FileReader::FileReader(std::string inPath, size_t size)
 	endOfLoadBuf = 0;
 	blockSize = BLOCKSIZE;
 	reloadBuffer();
-	asyncReload();
 	globalAdress = 0;
 	offset = 0;
+	asyncReload();
 }
 
 char *FileReader::getBuffer()
@@ -293,10 +293,10 @@ void FileReader::reset()
 	if (fs.good())
 		fs.seekg(0);
 	reloadBuffer();
+	globalAdress = 0;
 	localMtx.lock();
 	localLoad = true;
 	localMtx.unlock();
 	asyncReload();
-	globalAdress=0;
 }
 

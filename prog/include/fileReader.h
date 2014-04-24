@@ -20,7 +20,7 @@ private:
 	char *workBuffer;
 	char *block;
 
-	bool localLoad;
+	volatile bool localLoad;
 	std::future<bool> threadSync;
 	std::mutex localMtx;
 

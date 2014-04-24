@@ -13,11 +13,11 @@
 
 enum Raid
 {
-	Raid0=0,
-	Raid1=1,
-	Raid5_user=5,	//this one is only set by user
-	Raid5_incomplete=5,
-	Raid5_complete=5,
+	Raid0,
+	Raid1,
+	Raid5_user,	//this one is only set by user
+	Raid5_incomplete,
+	Raid5_complete,
 	Raid_unknown
 };
 
