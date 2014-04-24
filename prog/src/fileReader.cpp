@@ -36,11 +36,7 @@ size_t FileReader::getBufferSize()
 float FileReader::calcEntropyOfCurrentBlock()
 {
 	float ret = 0.0f;
-	unsigned int possibleVals[256];
-	for (unsigned int i = 0; i < 256; ++i)
-	{
-		possibleVals[i]=0;
-	}
+	unsigned int possibleVals[256]={};
 	for (unsigned int i = 0; i < blockSize; ++i)
 	{
 		possibleVals[(unsigned char)block[i]] += 1;

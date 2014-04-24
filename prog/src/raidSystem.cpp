@@ -330,11 +330,11 @@ bool RaidSystem::raidCheck()
 		{
 			char answer;
 			std::cout << "Do you want to accept this? [y/n]";
-			std::cin >> answer;
-			if (answer == 'n')
+			//std::cin >> answer;
+			//if (answer == 'n')
 			{
 				std::cout << "Raid Version can not be estimated automatically. Must be handed over with the program start." << std::endl;
-				return false;
+			//	return false;
 			}
 			//std::cout << "Found a raid version with the easy check: 5" << raidSystem  << std::endl;
 		}
