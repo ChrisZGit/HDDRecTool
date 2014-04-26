@@ -38,15 +38,15 @@ private:
 	Raid raidSystem;
 	std::vector<std::string> dictionary;
 	int stripeSize;
+	std::vector<size_t> stripeMap;
 	int lostImages;
-//	std::vector<Pattern> stripePattern;
 
 	bool checkForNull(char *in, size_t size);
 	bool checkForEqual(char *buf, char *in, size_t size);
 	bool easyCheck();
-//	bool intensiveCheck();
 	void loadDictionary(std::string in="/usr/share/dict/american-english");
 	bool calculateStripeSize();
+	bool buildDataImage();
 
 public:
 	RaidSystem();

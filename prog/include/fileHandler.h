@@ -32,7 +32,7 @@ public:
 	void addImage(std::string path);
 	bool findGoodBlock();
 	int estimateStripeSize();
-	std::vector<std::pair<int,bool>> estimateStripeMap();
+	std::vector<size_t> estimateStripeMap(bool isRaid5);
 	void reset();
 	int findStringInBlock(std::string seek);
 	bool reloadBuffers();

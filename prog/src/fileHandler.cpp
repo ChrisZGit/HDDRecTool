@@ -197,24 +197,28 @@ int FileHandler::estimateStripeSize()
 			}
 			++reloads;
 		} while (done == false);
-		std::cout << "Thread: " << id << " finished entropies. Working on edges" << std::endl;
+		std::cout << "\nThread: " << id << " finished entropies. Working on edges" << std::endl;
 		me->reset();
 
 		std::vector<size_t> adressEdges;
+		const float edge = 6.5f;
 		for (unsigned int i = 0; i < 12; ++i)
 		{
 			for (unsigned int j = 0; j < entropies[i].size();)
 			{
-				if (entropies[i].at(j).second > 5.5f)
+				if (entropies[i].at(j).second > edge)
 				{
 					adressEdges.push_back(entropies[i].at(j).first);
 					do {
 						++j;
+						if (j < entropies[i].size() && entropies[i].at(j).second < 0.25f && entropies[i].at(j-1).second > edge)
+						{
+							adressEdges.push_back(entropies[i].at(j).first);
+							break;
+						}
 						if (j >= entropies[i].size())
 							break;
 					} while (entropies[i].at(j).first-sizes[i] == entropies[i].at(j-1).first);
-					if (j < entropies[i].size())
-					adressEdges.push_back(entropies[i].at(j).first + sizes[i]);
 				} else {
 					do
 					{
@@ -257,97 +261,94 @@ int FileHandler::estimateStripeSize()
 		for (int i = 0; i < 12; ++i)
 		{
 			ret.push_back(counters[i]);
-			/*
-			if (counters[i-1]==0)
-				continue;
-			if ((float)counters[i]/(float)counters[i-1] >= calc)
-			{
-				calc = (float)counters[i]/(float)counters[i-1];
-				ret = sizes[i];
-			}
-			*/
 		}
 		return ret;
-	};
+	}; //lambda function end
 
 	int stripeSize = -1;
 	int counters[12]={};
-		unsigned int NUM_THREADS = inFiles.size();
-		std::vector<std::future<std::vector<int>>> futureResults(inFiles.size());
-		std::vector<std::vector<int>> results;
-	//	std::vector<std::future<std::vector<std::pair<size_t,float>>>> futureResults(inFiles.size());
-	//  std::vector<std::vector<std::pair<size_t,float>>> results;
+	unsigned int NUM_THREADS = inFiles.size();
+	std::vector<std::future<std::vector<int>>> futureResults(inFiles.size());
+	std::vector<std::vector<int>> results;
+	for (size_t i = 0; i < NUM_THREADS; ++i)
+	{
+		futureResults[i] = std::async(std::launch::async, lambda, i);
+	}
+	std::future_status status;
+	while (results.size() < inFiles.size())
+	{
 		for (size_t i = 0; i < NUM_THREADS; ++i)
 		{
-			futureResults[i] = std::async(std::launch::async, lambda, i);
-		}
-		std::future_status status;
-		while (results.size() < inFiles.size())
-		{
-			for (size_t i = 0; i < NUM_THREADS; ++i)
+			while (results.size() < i+1)
 			{
-				while (results.size() < i+1)
+				try
 				{
-					try
-					{
-						status = futureResults.at(i).wait_for(std::chrono::milliseconds(500));
-					} 
-					catch (std::future_error &e)
-					{
-						//std::cerr << "Future error " << e.what() << std::endl;
-						continue;
-					}
-					if (status == std::future_status::ready)
-					{
-						//		std::cout << "Thread " << i << "\t pushed" << std::endl;
-						//std::vector<std::pair<size_t,float>> res = futureResults.at(i).get();
-						std::vector<int> res = futureResults.at(i).get();
-						results.push_back(res);
-					}
+					status = futureResults.at(i).wait_for(std::chrono::milliseconds(500));
+				} 
+				catch (std::future_error &e)
+				{
+					continue;
+				}
+				if (status == std::future_status::ready)
+				{
+					//		std::cout << "Thread " << i << "\t pushed" << std::endl;
+					std::vector<int> res = futureResults.at(i).get();
+					results.push_back(res);
 				}
 			}
 		}
-		int value[12] = {2048, 1024, 512, 256, 128, 64, 32, 16, 8, 4, 2, 1};
-		for (unsigned int i=0; i < results.size();++i)
+	}
+	int value[12] = {2048, 1024, 512, 256, 128, 64, 32, 16, 8, 4, 2, 1};
+	for (unsigned int i=0; i < results.size();++i)
+	{
+		for (unsigned int j = 0; j < results.at(i).size(); ++j)
 		{
-			for (unsigned int j = 0; j < results.at(i).size(); ++j)
-			{
-				counters[j] += results.at(i).at(j);
-			}
+			counters[j] += results.at(i).at(j);
 		}
-		float min = 1000.0f;
-		int index = 0;
-		for (unsigned int i = 1; i < 12; ++i)
+	}
+	float min = 1000.0f;
+	int index = 0;
+	for (unsigned int i = 1; i < 12; ++i)
+	{
+		float tmp = (float)counters[i-1]/(float)counters[i]; 
+		if (tmp < min)
 		{
-			float tmp = (float)counters[i-1]/(float)counters[i]; 
-			if (tmp < min)
-			{
-				min = tmp;
-				index = i;
-			}
+			min = tmp;
+			index = i;
 		}
-		stripeSize = value[index];
+	}
+	stripeSize = value[index];
 	int x = 0;
 	std::cout << "Found:\n";
-	std::cout << "2048:\t" << counters[x++] << std::endl;
-	std::cout << "1024:\t" << counters[x++] << std::endl;
-	std::cout << " 512:\t" << counters[x++] << std::endl;
-	std::cout << " 256:\t" << counters[x++] << std::endl;
-	std::cout << " 128:\t" << counters[x++] << std::endl;
-	std::cout << "  64:\t" << counters[x++] << std::endl;
-	std::cout << "  32:\t" << counters[x++] << std::endl;
-	std::cout << "  16:\t" << counters[x++] << std::endl;
-	std::cout << "   8:\t" << counters[x++] << std::endl;
-	std::cout << "   4:\t" << counters[x++] << std::endl;
-	std::cout << "   2:\t" << counters[x++] << std::endl;
-	std::cout << "   1:\t" << counters[x++] << std::endl;
+	std::cout << "2048:\t" << counters[x] << std::endl;
+	++x;
+	std::cout << "1024:\t" << counters[x] << "\t" << (float)counters[x]/(float)counters[x-1] << std::endl;
+	++x;
+	std::cout << " 512:\t" << counters[x] << "\t" << (float)counters[x]/(float)counters[x-1] << std::endl;
+	++x;
+	std::cout << " 256:\t" << counters[x] << "\t" << (float)counters[x]/(float)counters[x-1] <<  std::endl;
+	++x;
+	std::cout << " 128:\t" << counters[x] << "\t" << (float)counters[x]/(float)counters[x-1] <<  std::endl;
+	++x;
+	std::cout << "  64:\t" << counters[x] << "\t" << (float)counters[x]/(float)counters[x-1] <<  std::endl;
+	++x;
+	std::cout << "  32:\t" << counters[x] << "\t" << (float)counters[x]/(float)counters[x-1] <<  std::endl;
+	++x;
+	std::cout << "  16:\t" << counters[x] << "\t" << (float)counters[x]/(float)counters[x-1] <<  std::endl;
+	++x;
+	std::cout << "   8:\t" << counters[x] << "\t" << (float)counters[x]/(float)counters[x-1] <<  std::endl;
+	++x;
+	std::cout << "   4:\t" << counters[x] << "\t" << (float)counters[x]/(float)counters[x-1] <<  std::endl;
+	++x;
+	std::cout << "   2:\t" << counters[x] << "\t" << (float)counters[x]/(float)counters[x-1] <<  std::endl;
+	++x;
+	std::cout << "   1:\t" << counters[x] << "\t" << (float)counters[x]/(float)counters[x-1] <<  std::endl;
 	if (stripeSize == 2048)
 	{
 		std::cout << "Not one good block found. Need to abort" << std::endl;
 		return false;
 	}
 	std::cout << "It's probably:\t" << stripeSize << std::endl;
-
 	char answer='y';
 	std::cout << "Estimated Stripesize: " << stripeSize << "KB" << std::endl;
 	std::cout << "It's just with simple heuristic. Would you like to continue with this result?" << std::endl;
@@ -367,149 +368,308 @@ int FileHandler::estimateStripeSize()
 	{
 		std::cerr << "Try a bigger BlockSize in 'include/defines.h'. Maybe, the heuristic works better than. Otherwise you have to estimate it on your own." << std::endl;
 	}
+	for (size_t i = 0; i < inFiles.size(); ++i)
+	{
+		inFiles.at(i)->setBlockSize(stripeSize);
+	}
 
 	/*
-
-	   for (size_t i = 0; i < inFiles.size(); ++i)
+	   for (unsigned int i = 0; i < results.size(); ++i)
 	   {
-	   inFiles.at(i)->setBlockSize(stripeSize/8);
+	   pointer[i] = 0;
+	   while (results.at(i).at(pointer[i]).first < 1024)
+	   {
+	   ++pointer[i];
 	   }
+	   }
+	   size_t lastAdress=0;
+	   while (true)
+	   {
+	   bool killMe = false;
+	   for (unsigned int i = 0; i < results.size(); ++i)
+	   {
+	   if (pointer[i] >= results.at(i).size())
+	   {
+	   killMe = true;
+	   break;
+	   }
+	   }
+	   if (killMe == true)
+	   break;
+	   size_t currentLowest = -1;
+	   for (unsigned int i = 0; i < results.size(); ++i)
+	   {
+	   size_t low = results.at(i).at(pointer[i]).first;
+	   currentLowest = std::min(currentLowest,low);
+	   }
+	   if (lastAdress + 32 < currentLowest)
+	   {
+	   lastAdress = currentLowest-32;
+	   }
+	   for (; lastAdress < currentLowest; lastAdress += inFiles.at(0)->getBlockSize()/1024)
+	   {
+	   std::cout << std::setw(10) << lastAdress << "\t";
+	   for (unsigned int i = 0; i < results.size(); ++i)
+	   {
+	   std::cout << std::setw(10) << "0.00000\t"; 
+	   }
+	   std::cout << std::endl;
+	   }
+	   std::cout << std::setw(10) << currentLowest << "\t";
+	   for (unsigned int i = 0; i < results.size(); ++i)
+	   {
+	   if (results.at(i).at(pointer[i]).first > currentLowest)
+	   {
+	   std::cout << std::setw(10) << "0.00000\t";
+	//std::cout << std::setw(10) << results.at(i).at(pointer[i]).first << "\t\t"; 
+	} else
+	{
+	std::cout << std::setw(10) << (float)results.at(i).at(pointer[i]).second << "\t"; 
+	//std::cout << std::setw(10) << results.at(i).at(pointer[i]).first << "\t\t"; 
+	pointer[i]++;
+	}
+	}
+	std::cout << std::endl;
+	lastAdress = currentLowest + inFiles.at(0)->getBlockSize();
+	}
+	 */
+	return stripeSize;
+}
 
-	   unsigned int NUM_THREADS = inFiles.size();
-	//std::vector<std::future<int>> futureResults(inFiles.size());
-	//std::vector<int> results;
+std::vector<size_t> FileHandler::estimateStripeMap(bool isRaid5)
+{
+	auto lambda = [&] (size_t id) -> std::vector<std::pair<size_t, float>>
+	{
+		const int CHECKS = 64*1024*1024;
+		std::vector<std::pair<size_t, float>> entropies;
+		FileReader *me = inFiles.at(id);
+		me->reset();
+
+		int offset=0;
+		float ent=0;
+		int reloads=0;
+		do
+		{
+			while ((offset=me->findFirstNonemptyBlock())!=-1)
+			{
+				if (entropies.size() >= CHECKS)
+					break;
+				me->setOffset(offset);
+				ent = me->calcEntropyOfCurrentBlock();
+				std::pair<size_t, float> input((offset+reloads*me->getBufferLength())/1024, ent);
+				me->setOffset(me->getBlockSize()+offset);
+				entropies.push_back(input);
+				if (entropies.size() >= CHECKS)
+					break;
+			}
+			std::string wr = "Thread ";
+			wr += std::to_string(id);
+			wr += " working ";
+			printf("\r%s\t",wr.c_str());
+			fflush(stdout);
+			if (me->asyncReload()==false)
+			{
+				break;
+			}
+			++reloads;
+		} while (entropies.size() < CHECKS);
+		return entropies;
+	};
+	//lambda function end
+
+
+
+	for (size_t i = 0; i < inFiles.size(); ++i)
+	{
+	//	inFiles.at(i)->setBlockSize(inFiles.at(i)->getBlockSize());
+		inFiles.at(i)->setBlockSize(64*1024);
+	}
+
+	unsigned int NUM_THREADS = inFiles.size();
+	std::vector<std::pair<size_t, float>> entropies;
+
 	std::vector<std::future<std::vector<std::pair<size_t,float>>>> futureResults(inFiles.size());
 	std::vector<std::vector<std::pair<size_t,float>>> results;
 	for (size_t i = 0; i < NUM_THREADS; ++i)
 	{
-	futureResults[i] = std::async(std::launch::async, lambda, i);
+		futureResults[i] = std::async(std::launch::async, lambda, i);
 	}
 	std::future_status status;
 	while (results.size() < inFiles.size())
 	{
-	for (size_t i = 0; i < NUM_THREADS; ++i)
-	{
-	while (results.size() < i+1)
-	{
-	try
-	{
-	status = futureResults.at(i).wait_for(std::chrono::milliseconds(500));
-	} 
-	catch (std::future_error &e)
-	{
-	//std::cerr << "Future error " << e.what() << std::endl;
-	continue;
-	}
-	if (status == std::future_status::ready)
-	{
-	//		std::cout << "Thread " << i << "\t pushed" << std::endl;
-	std::vector<std::pair<size_t,float>> res = futureResults.at(i).get();
-	results.push_back(res);
-	}
-	}
-	}
-	}
-	//	size_t check=0;
-	//	size_t last = 0;
-	//	float val = 0.0f;
-	size_t *pointer = new size_t[results.size()];
-	//	size_t *lowest = new size_t[results.size()];
-	FileReader **files = new FileReader*[inFiles.size()];
-	std::vector<size_t> adressEdges;
-	//	size_t lastAdress = 0;
-	for (unsigned int i = 0; i < results.size(); ++i)
-	{
-	files[i] = inFiles.at(i);
-	pointer[i] = 0;
-	//	std::cout << results.at(i).at(pointer[i]).first << "\t";
-	while (results.at(i).at(pointer[i]).first < 1024)
-	{
-	++pointer[i];
-	}
-	}
-
-
-
-
-
-
-
-	for (unsigned int i = 0; i < results.size(); ++i)
-	{
-	files[i] = inFiles.at(i);
-	files[i]->reset();
-	pointer[i] = 0;
-	while (results.at(i).at(pointer[i]).first < 1024)
-	{
-		++pointer[i];
-	}
-}
-size_t lastAdress=0;
-while (true)
-{
-	bool killMe = false;
-	for (unsigned int i = 0; i < results.size(); ++i)
-	{
-		if (pointer[i] >= results.at(i).size())
+		for (size_t i = 0; i < NUM_THREADS; ++i)
 		{
-			killMe = true;
-			break;
+			while (results.size() < i+1)
+			{
+				try
+				{
+					status = futureResults.at(i).wait_for(std::chrono::milliseconds(500));
+				} 
+				catch (std::future_error &e)
+				{
+					continue;
+				}
+				if (status == std::future_status::ready)
+				{
+					//		std::cout << "Thread " << i << "\t pushed" << std::endl;
+					results.push_back(futureResults.at(i).get());
+				}
+			}
 		}
 	}
-	if (killMe == true)
-		break;
-	size_t currentLowest = -1;
+
+	
+	int **mappe = new int *[results.size()];
+	for (unsigned int i = 0; i < results.size();++i)
+	{
+		mappe[i] = new int[results.size()];
+		for (unsigned int j = 0; j < results.size(); ++j)
+		{
+			mappe[i][j] = 0;
+		}
+	}
+
+	int modOp = inFiles.size()*inFiles.at(0)->getBlockSize()/1024;
+
+	unsigned int *pointer = new unsigned int[results.size()]{}; 
 	for (unsigned int i = 0; i < results.size(); ++i)
 	{
-		size_t low = results.at(i).at(pointer[i]).first;
-		currentLowest = std::min(currentLowest,low);
+		pointer[i] = 0;
 	}
-	if (lastAdress + 32 < currentLowest)
+	size_t lastAdress=0;
+	bool blockBegin=true;
+	std::cout << std::endl;
+	while (true)
 	{
-		lastAdress = currentLowest-32;
-	}
-	for (; lastAdress < currentLowest; lastAdress += inFiles.at(0)->getBlockSize()/1024)
-	{
-		std::cout << std::setw(10) << lastAdress << "\t";
+		bool killMe = false;
 		for (unsigned int i = 0; i < results.size(); ++i)
 		{
-			std::cout << std::setw(10) << "0.00000\t"; 
+			if (pointer[i] >= results.at(i).size())
+			{
+				killMe = true;
+				break;
+			}
+		}
+		if (killMe == true)
+			break;
+		//size_t currentLowest = results.at(i).at(pointer[i]).first;
+		size_t currentLowest = -1;
+		for (unsigned int i = 0; i < results.size(); ++i)
+		{
+			size_t low = results.at(i).at(pointer[i]).first;
+			currentLowest = std::min(currentLowest,low);
+		}
+		if (currentLowest < lastAdress+inFiles.at(0)->getBlockSize()/1024*64)
+		{
+			for (unsigned int i = 0; i < results.size(); ++i)
+			{
+				if (results.at(i).at(pointer[i]).first==currentLowest)
+					pointer[i]++;
+			}
+			lastAdress = currentLowest;
+			continue;
+		}
+		lastAdress = currentLowest;
+		for (unsigned int i = 0; i < results.size(); ++i)
+		{
+			if (results.at(i).at(pointer[i]).first > currentLowest)
+			{
+				int pos = results.at(i).at(pointer[i]).first % modOp;
+				pos = pos / (inFiles.at(0)->getBlockSize()/1024);
+				if (blockBegin == true)
+				{
+					mappe[i][pos] += 1;
+				} else
+				{
+					if (isRaid5 == true)
+					{
+						mappe[i][pos] += 10000;//inFiles.size()-2;
+					} else
+					{
+						mappe[i][pos] += 10000;//inFiles.size()-1;
+					}
+				}
+				//pointer[i]++;
+			} else //if (results.at(i).at(pointer[i]).first == currentLowest)
+			{
+				pointer[i]++;
+			}
+		}
+		blockBegin = not blockBegin;
+	}
+	std::cout << std::endl;
+	for (unsigned int i = 0; i < results.size();++i)
+	{
+		for (unsigned int j = 0; j < results.size(); ++j)
+		{
+			std::cout << mappe[j][i] << "\t";
 		}
 		std::cout << std::endl;
 	}
-	std::cout << std::setw(10) << currentLowest << "\t";
+
+	/*
+	unsigned int *pointer = new unsigned int[results.size()]{}; 
+
 	for (unsigned int i = 0; i < results.size(); ++i)
 	{
-		if (results.at(i).at(pointer[i]).first > currentLowest)
+		pointer[i] = 0;
+		while (results.at(i).at(pointer[i]).first < 1024)
 		{
-			std::cout << std::setw(10) << "0.00000\t";
-			//std::cout << std::setw(10) << results.at(i).at(pointer[i]).first << "\t\t"; 
-		} else
-		{
-			std::cout << std::setw(10) << (float)results.at(i).at(pointer[i]).second << "\t"; 
-			//std::cout << std::setw(10) << results.at(i).at(pointer[i]).first << "\t\t"; 
-			pointer[i]++;
+			++pointer[i];
 		}
 	}
-	std::cout << std::endl;
-	lastAdress = currentLowest + inFiles.at(0)->getBlockSize();
-}
-*/
-return stripeSize;
-}
+	size_t lastAdress=0;
+	while (true)
+	{
+		bool killMe = false;
+		for (unsigned int i = 0; i < results.size(); ++i)
+		{
+			if (pointer[i] >= results.at(i).size())
+			{
+				killMe = true;
+				break;
+			}
+		}
+		if (killMe == true)
+			break;
+		size_t currentLowest = -1;
+		for (unsigned int i = 0; i < results.size(); ++i)
+		{
+			size_t low = results.at(i).at(pointer[i]).first;
+			currentLowest = std::min(currentLowest,low);
+		}
+		if (lastAdress + 32 < currentLowest)
+		{
+			lastAdress = currentLowest-32;
+		}
+		for (; lastAdress < currentLowest; lastAdress += inFiles.at(0)->getBlockSize()/1024)
+		{
+			std::cout << std::setw(10) << lastAdress << "\t";
+			for (unsigned int i = 0; i < results.size(); ++i)
+			{
+				std::cout << std::setw(10) << "0.00000\t"; 
+			}
+			std::cout << std::endl;
+		}
+		std::cout << std::setw(10) << currentLowest << "\t";
+		for (unsigned int i = 0; i < results.size(); ++i)
+		{
+			if (results.at(i).at(pointer[i]).first > currentLowest)
+			{
+				std::cout << std::setw(10) << "0.00000\t";
+			} else
+			{
+				std::cout << std::setw(10) << (float)results.at(i).at(pointer[i]).second << "\t"; 
+				pointer[i]++;
+			}
+		}
+		std::cout << std::endl;
+		lastAdress = currentLowest + inFiles.at(0)->getBlockSize();
+	}
+	*/
+		std::vector<size_t> stripeMap;
 
-std::vector<std::pair<int,bool>> FileHandler::estimateStripeMap()
-{
-	// Datastructure:
-	// int: enumeration
-	// bool: false = data; true = parity;
-	// Example:
-	//	0,0		1,0		0,1
-	//	1,1		3,0		2,0
-	//	5,0		2,1		4,0
-
-	std::vector<std::pair<int,bool>> stripeMap;
-
+	/*
 	//find the device with the partition table
 	//estimate it right there
 	std::pair<int,bool> test(0, false);
@@ -522,12 +682,17 @@ std::vector<std::pair<int,bool>> FileHandler::estimateStripeMap()
 	stripeMap.push_back(test);
 
 	//search for a part, where the stripe map can be estimated
+	 */
 	//fill the vector
 
 
 	//sort it then, knowing which one the first is, and estimate the other two
 
 
+	for (size_t i = 0; i < inFiles.size(); ++i)
+	{
+		inFiles.at(i)->setBlockSize(inFiles.at(i)->getBlockSize());
+	}
 	return stripeMap;
 }
 

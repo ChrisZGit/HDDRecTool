@@ -249,6 +249,90 @@ bool RaidSystem::calculateStripeSize()
 	return true;
 }
 
+bool RaidSystem::buildDataImage()
+{
+	FileWriter writeMe("/media/Data/Uni/dataHDD/output/tmp.dd");
+	std::vector<FileReader *> inFiles = handle->getInFiles();
+	for (unsigned int j = 0; j < inFiles.size(); ++j)
+	{
+		inFiles.at(j)->reset();
+		inFiles.at(j)->setBlockSize(stripeSize);
+	}
+	if (raidSystem == Raid5_user || raidSystem == Raid5_incomplete || raidSystem == Raid5_complete)
+	{
+		const size_t bufferSize=(inFiles.size()-1)*stripeSize;
+		char *buffer = new char[bufferSize];
+		int *blocks = new int[inFiles.size()]{};
+		char *parity = new char[stripeSize]{};
+
+		unsigned int pointer=0;
+		double written = 0.0f;
+		while (true)
+		{
+			int order = 1;
+			for (unsigned int i = 0; i < inFiles.size(); ++i)
+			{
+				blocks[i]=0;
+			}
+			for (unsigned int i = 0; i < inFiles.size()-1; ++i)
+			{
+				blocks[stripeMap.at(i+pointer)]=order++;
+			}
+			order = 0;
+			do
+			{
+				for (unsigned int i = 0; i < inFiles.size(); ++i)
+				{
+					if (blocks[i] == order && order == 0)
+					{
+						if (inFiles.at(i)->newBlock() == false)
+						{
+							if (inFiles.at(i)->asyncReload()== false )
+							{
+								writeMe.closeFile();
+								return true;
+							}
+						}
+						order++;
+						continue;
+					}
+					if (blocks[i] == order && order > 0)
+					{
+						char *tmp = inFiles.at(i)->getBuffer();
+						for (unsigned int j = 0; j < stripeSize; ++j)
+						{
+							buffer[j+(order-1)*stripeSize] = tmp[j];
+							parity[j] = parity[j]^buffer[j];
+						}
+						if (inFiles.at(i)->newBlock() == false)
+						{
+							if (inFiles.at(i)->asyncReload()== false )
+							{
+								writeMe.closeFile();
+								return true;
+							}
+						}
+						++order;
+					}
+				}
+			} while (order < inFiles.size());
+			written += bufferSize/1024.0f/1024.0f;
+			printf("\r%f MB finished", written);
+			writeMe.writeToFile(buffer, bufferSize);
+			pointer = (pointer + inFiles.size()-1)%((stripeMap.size()));
+			return true;
+		}
+	} else if (raidSystem == Raid1)
+	{
+		return false;
+	} else if (raidSystem == Raid0)
+	{
+		return true;
+	} else
+		return false;
+	return false;
+}
+
 bool RaidSystem::recoverLostImage()
 {
 	if (lostImages == 0)
@@ -266,7 +350,7 @@ bool RaidSystem::recoverLostImage()
 	if (raidSystem == Raid5_incomplete)
 	{
 		size_t bufferlength = inFiles.at(0)->getBufferLength();
-//		size_t blocklength = inFiles.at(0)->getBlockSize();
+		//		size_t blocklength = inFiles.at(0)->getBlockSize();
 		double written = 0.0f;
 		size_t runs=0;
 		char *buf = new char[bufferlength];
@@ -334,7 +418,7 @@ bool RaidSystem::raidCheck()
 			//if (answer == 'n')
 			{
 				std::cout << "Raid Version can not be estimated automatically. Must be handed over with the program start." << std::endl;
-			//	return false;
+				//	return false;
 			}
 			//std::cout << "Found a raid version with the easy check: 5" << raidSystem  << std::endl;
 		}
@@ -391,7 +475,7 @@ bool RaidSystem::raidCheck()
 	if (raidSystem == Raid5_incomplete)
 	{
 		std::cout << "Incomplete Raid5-System. Will recover image and mount it internally." << std::endl;
-		recoverLostImage();
+		//recoverLostImage();
 		handle->addImage(handle->getFileWriter()->getPath());
 	}
 
@@ -399,7 +483,8 @@ bool RaidSystem::raidCheck()
 	if (stripeSize == -1)
 	{
 		std::cout << "No stripesize specified! Trying to calculate Stripesize now." << std::endl;
-		found = calculateStripeSize();
+	//	found = calculateStripeSize();
+		found=true;
 	} else
 	{
 		std::cout << "Using stripesize specified by user!" << std::endl;
@@ -422,12 +507,24 @@ bool RaidSystem::raidCheck()
 	//	1,1		2,0		3,0
 	//	4,0		2,1		5,0
 	std::cout << "Trying to estimate the stripemap." << std::endl;
-	std::vector<std::pair<int, bool>> stripeMap;
-	stripeMap = handle->estimateStripeMap();
+	//std::vector<size_t> stripeMap;
+	if (raidSystem == Raid5_user || raidSystem == Raid5_incomplete || raidSystem == Raid5_complete)
+	{
+		stripeMap = handle->estimateStripeMap(true);
+	} else
+	{
+		stripeMap = handle->estimateStripeMap(false);
+	}
 
+	//stripeMap.push_back(0);
+	//stripeMap.push_back(2);
+	//stripeMap.push_back(0);
+	//stripeMap.push_back(1);
+	//stripeMap.push_back(2);
+	//stripeMap.push_back(1);
 	//if stripeMap valid, basst
 	//else return false
-	
+
 	if (stripeMap.size() == 0)
 	{
 		std::cerr << "No valid Stripemap found. Has to abort Recovery." << std::endl;
@@ -435,7 +532,7 @@ bool RaidSystem::raidCheck()
 	}
 	else
 	{
-		found = true;
+		//found = buildDataImage();
 	}
 
 	return found;
