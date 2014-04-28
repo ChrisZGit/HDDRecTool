@@ -606,6 +606,35 @@ std::vector<size_t> FileHandler::estimateStripeMap(bool isRaid5)
 		}
 		std::cout << std::endl;
 	}
+	char answer;
+	std::cout << "Are you happy with the estimated Stripemap? [y/n] ";
+	std::cin >> answer;
+	if (answer == 'y')
+	{
+		std::cout << "Continuing with restoring the image." << std::endl;
+	}
+	else
+	{
+		std::cout << "Please enter the Stripemap as an array beginning with the top row, starting with 1 as numeration. 0 is a parity block. Example: " << std::endl;
+		std::cout << "1 \n 2 \n 0 \n 0 \n 3 \n 4 ..." << std::endl;
+		for (unsigned int i = 0; i < results.size();++i)
+	    {
+	        for (unsigned int j = 0; j < results.size(); ++j)
+	        {
+	            std::cin >> mappe[j][i];
+	        }
+	 	}
+		
+		for (unsigned int i = 0; i < results.size();++i)
+	    {
+	        for (unsigned int j = 0; j < results.size(); ++j)
+	        {
+	            std::cout << mappe[j][i] << "\t";
+	        }
+			std::cout << std::endl;
+		}
+	}
+	
 
 	/*
 	unsigned int *pointer = new unsigned int[results.size()]{}; 
