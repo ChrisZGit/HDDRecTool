@@ -456,6 +456,11 @@ std::vector<size_t> FileHandler::estimateStripeMap(bool isRaid5)
 					break;
 				me->setOffset(offset);
 				ent = me->calcEntropyOfCurrentBlock();
+				if (ent < 0.25f)
+				{
+					me->setOffset(me->getBlockSize()+offset);
+					continue;
+				}
 				std::pair<size_t, float> input((offset+reloads*me->getBufferLength())/1024, ent);
 				me->setOffset(me->getBlockSize()+offset);
 				entropies.push_back(input);
@@ -517,128 +522,15 @@ std::vector<size_t> FileHandler::estimateStripeMap(bool isRaid5)
 			}
 		}
 	}
+	std::cout << std::endl;
+	std::cout << "Entropie calculation finished" << std::endl;
 
-	
-	int **mappe = new int *[results.size()];
-	for (unsigned int i = 0; i < results.size();++i)
-	{
-		mappe[i] = new int[results.size()];
-		for (unsigned int j = 0; j < results.size(); ++j)
-		{
-			mappe[i][j] = 0;
-		}
-	}
+	std::vector<std::vector<std::pair<bool, std::vector<size_t>>>> map;
+	map.resize(results.size());
 
 	int modOp = inFiles.size()*inFiles.at(0)->getBlockSize()/1024;
 
 	unsigned int *pointer = new unsigned int[results.size()]{}; 
-	for (unsigned int i = 0; i < results.size(); ++i)
-	{
-		pointer[i] = 0;
-	}
-	size_t lastAdress=0;
-	bool blockBegin=true;
-	std::cout << std::endl;
-	while (true)
-	{
-		bool killMe = false;
-		for (unsigned int i = 0; i < results.size(); ++i)
-		{
-			if (pointer[i] >= results.at(i).size())
-			{
-				killMe = true;
-				break;
-			}
-		}
-		if (killMe == true)
-			break;
-		//size_t currentLowest = results.at(i).at(pointer[i]).first;
-		size_t currentLowest = -1;
-		for (unsigned int i = 0; i < results.size(); ++i)
-		{
-			size_t low = results.at(i).at(pointer[i]).first;
-			currentLowest = std::min(currentLowest,low);
-		}
-		if (currentLowest < lastAdress+inFiles.at(0)->getBlockSize()/1024*64)
-		{
-			for (unsigned int i = 0; i < results.size(); ++i)
-			{
-				if (results.at(i).at(pointer[i]).first==currentLowest)
-					pointer[i]++;
-			}
-			lastAdress = currentLowest;
-			continue;
-		}
-		lastAdress = currentLowest;
-		for (unsigned int i = 0; i < results.size(); ++i)
-		{
-			if (results.at(i).at(pointer[i]).first > currentLowest)
-			{
-				int pos = results.at(i).at(pointer[i]).first % modOp;
-				pos = pos / (inFiles.at(0)->getBlockSize()/1024);
-				if (blockBegin == true)
-				{
-					mappe[i][pos] += 1;
-				} else
-				{
-					if (isRaid5 == true)
-					{
-						mappe[i][pos] += 10000;//inFiles.size()-2;
-					} else
-					{
-						mappe[i][pos] += 10000;//inFiles.size()-1;
-					}
-				}
-				//pointer[i]++;
-			} else //if (results.at(i).at(pointer[i]).first == currentLowest)
-			{
-				pointer[i]++;
-			}
-		}
-		blockBegin = not blockBegin;
-	}
-	std::cout << std::endl;
-	for (unsigned int i = 0; i < results.size();++i)
-	{
-		for (unsigned int j = 0; j < results.size(); ++j)
-		{
-			std::cout << mappe[j][i] << "\t";
-		}
-		std::cout << std::endl;
-	}
-	char answer;
-	std::cout << "Are you happy with the estimated Stripemap? [y/n] ";
-	std::cin >> answer;
-	if (answer == 'y')
-	{
-		std::cout << "Continuing with restoring the image." << std::endl;
-	}
-	else
-	{
-		std::cout << "Please enter the Stripemap as an array beginning with the top row, starting with 1 as numeration. 0 is a parity block. Example: " << std::endl;
-		std::cout << "1 \n 2 \n 0 \n 0 \n 3 \n 4 ..." << std::endl;
-		for (unsigned int i = 0; i < results.size();++i)
-	    {
-	        for (unsigned int j = 0; j < results.size(); ++j)
-	        {
-	            std::cin >> mappe[j][i];
-	        }
-	 	}
-		
-		for (unsigned int i = 0; i < results.size();++i)
-	    {
-	        for (unsigned int j = 0; j < results.size(); ++j)
-	        {
-	            std::cout << mappe[j][i] << "\t";
-	        }
-			std::cout << std::endl;
-		}
-	}
-	
-
-	/*
-	unsigned int *pointer = new unsigned int[results.size()]{}; 
-
 	for (unsigned int i = 0; i < results.size(); ++i)
 	{
 		pointer[i] = 0;
@@ -647,56 +539,315 @@ std::vector<size_t> FileHandler::estimateStripeMap(bool isRaid5)
 			++pointer[i];
 		}
 	}
-	size_t lastAdress=0;
+	bool blockBegin=true;
+	std::vector<size_t> pushMe;
 	while (true)
 	{
 		bool killMe = false;
-		for (unsigned int i = 0; i < results.size(); ++i)
+		bool sameHeight=true;
+		size_t currentLowest = -1;
+		while (sameHeight==true)
 		{
-			if (pointer[i] >= results.at(i).size())
+			for (unsigned int i = 0; i < results.size(); ++i)
 			{
-				killMe = true;
+				if (pointer[i] >= results.at(i).size()-1)
+				{
+					killMe = true;
+					break;
+				}
+			}
+			if (killMe == true)
+				break;
+			bool sameLevel = true;
+			currentLowest = results.at(0).at(pointer[0]).first;
+			for (unsigned int i = 1; i < results.size(); ++i)
+			{
+				size_t low = results.at(i).at(pointer[i]).first;
+				if (currentLowest != low)
+					sameLevel = false;
+				currentLowest = std::min(currentLowest,low);
+			}
+			if (sameLevel == true)
+			{
+				for (unsigned int i = 0; i < results.size(); ++i)
+				{
+					++pointer[i];
+				}
+			} else
+			{
+				blockBegin = false;
+				for (unsigned int i = 0; i < results.size(); ++i)
+				{
+					if (results.at(i).at(pointer[i]+1).first == currentLowest+inFiles.at(0)->getBlockSize()/1024)
+					{
+						blockBegin = true;
+					}
+				}
 				break;
 			}
 		}
-		if (killMe == true)
+		if (killMe==true)
 			break;
-		size_t currentLowest = -1;
-		for (unsigned int i = 0; i < results.size(); ++i)
-		{
-			size_t low = results.at(i).at(pointer[i]).first;
-			currentLowest = std::min(currentLowest,low);
-		}
-		if (lastAdress + 32 < currentLowest)
-		{
-			lastAdress = currentLowest-32;
-		}
-		for (; lastAdress < currentLowest; lastAdress += inFiles.at(0)->getBlockSize()/1024)
-		{
-			std::cout << std::setw(10) << lastAdress << "\t";
-			for (unsigned int i = 0; i < results.size(); ++i)
-			{
-				std::cout << std::setw(10) << "0.00000\t"; 
-			}
-			std::cout << std::endl;
-		}
-		std::cout << std::setw(10) << currentLowest << "\t";
+		pushMe.clear();
+		int pos = currentLowest % modOp;
+		pos = pos / (inFiles.at(0)->getBlockSize()/1024);
 		for (unsigned int i = 0; i < results.size(); ++i)
 		{
 			if (results.at(i).at(pointer[i]).first > currentLowest)
 			{
-				std::cout << std::setw(10) << "0.00000\t";
-			} else
+				pushMe.push_back(i);
+			} else 
 			{
-				std::cout << std::setw(10) << (float)results.at(i).at(pointer[i]).second << "\t"; 
 				pointer[i]++;
 			}
 		}
-		std::cout << std::endl;
-		lastAdress = currentLowest + inFiles.at(0)->getBlockSize();
+		std::pair<bool,std::vector<size_t>> bla(blockBegin, pushMe);
+		map.at(pos).push_back(bla);
+	}
+
+	//DEBUG OUTPUT
+	/*
+	for (int i = 0; i < map.size(); ++i)
+	{
+		std::cout << i*inFiles.at(0)->getBlockSize()/1024 << ":" << std::endl;
+		std::cout << "Begin:" << std::endl;
+		for (int j = 0; j < map.at(i).size(); ++j)
+		{
+			if (map.at(i).at(j).first == true)
+			{
+				for (auto in : map.at(i).at(j).second)
+				{
+					std::cout << "\t" << in;
+				}
+				std::cout << std::endl;
+			}
+		}
+		std::cout << "End:" << std::endl;
+		for (int j = 0; j < map.at(i).size(); ++j)
+		{
+			if (map.at(i).at(j).first == false)
+			{
+				for (auto in : map.at(i).at(j).second)
+				{
+					std::cout << "\t" << in;
+				}
+				std::cout << std::endl;
+			}
+		}
 	}
 	*/
-		std::vector<size_t> stripeMap;
+
+	std::vector<std::vector<int>> mappe;
+	mappe.resize(results.size());
+	for (unsigned int i = 0; i < results.size();++i)
+	{
+		mappe.at(i).resize(results.size(),-1);
+		for (unsigned int j = 0; j < results.size(); ++j)
+		{
+			mappe[i][j] = -1;
+		}
+	}
+
+	bool unchanged=true;
+	int *hits = new int[results.size()];
+	int Bhits = 0;
+	int Ehits = 0;
+	int BClear, EClear;
+
+	for (int x = 0; x < map.size(); ++x)
+	{
+		int BPos=0;
+		int EPos=results.size()-1;
+		if (isRaid5==true)
+			EPos--;
+		while (!map.at(x).empty())
+		{
+			unchanged = true;
+			for (int i = 0; i < results.size(); ++i)
+			{
+				hits[i] = 0;
+			}
+			Bhits = 0;
+			Ehits = 0;
+			BClear=-1;
+			EClear=-1;
+			for (int j = 0; j < map.at(x).size(); ++j)
+			{
+				if (map.at(x).at(j).first == true)
+				{
+					std::vector<size_t> tmp = map.at(x).at(j).second;
+					if (tmp.size() == 1)
+					{
+						Bhits += 1;
+						hits[tmp.at(0)] += 1;
+					}
+				} else
+				{
+					std::vector<size_t> tmp = map.at(x).at(j).second;
+					if (tmp.size() == 1)
+					{
+						Ehits += 1;
+						hits[tmp.at(0)] += 4096;
+					}
+				}
+			}
+			for (int i = 0; i < results.size(); ++i)
+			{
+				if ((hits[i]%4096) > 0.6f*Bhits)
+				{
+					BClear = i;
+					mappe.at(x).at(i) = BPos;
+					BPos++;
+					unchanged = false;
+				} else if ((hits[i]>>12) > 0.6f*Ehits)
+				{
+					EClear = i;
+					mappe.at(x).at(i) = EPos;
+					EPos--;
+					unchanged = false;
+				}
+			}
+			if (unchanged == true)
+			{
+				map.at(x).clear();
+				continue;
+			}
+			for (int j = 0; j < map.at(x).size(); ++j)
+			{
+				if (map.at(x).at(j).first == true)
+				{
+					if (map.at(x).at(j).second.size()==1)
+					{
+						map.at(x).at(j).second.clear();
+						continue;
+					}
+					for (unsigned int t = 0; t < map.at(x).at(j).second.size(); ++t)
+					{
+						if (map.at(x).at(j).second.at(t) == BClear)
+						{
+							map.at(x).at(j).second.erase(map.at(x).at(j).second.begin()+t);
+						}
+					}
+				} else
+				{
+					if (map.at(x).at(j).second.size()==1)
+					{
+						map.at(x).at(j).second.clear();
+						continue;
+					}
+					for (unsigned int t = 0; t < map.at(x).at(j).second.size(); ++t)
+					{
+						if (map.at(x).at(j).second.at(t) == EClear)
+						{
+							map.at(x).at(j).second.erase(map.at(x).at(j).second.begin()+t);
+						}
+					}
+				}
+			}
+		}
+	}
+
+	std::cout << "Found this map: " << std::endl;
+	for (unsigned int i = 0; i < mappe.size();++i)
+	{
+		for (unsigned int j = 0; j < mappe.at(i).size(); ++j)
+		{
+			if (mappe.at(i).at(j) == -2)
+			{
+				std::cout << "P" << "\t";
+			} else
+			{
+				std::cout << mappe.at(i).at(j) << "\t";
+			}
+		}
+		std::cout << std::endl;
+	}
+
+
+	/*
+	   char answer;
+	   std::cout << "Are you happy with the estimated Stripemap? [y/n] ";
+	   std::cin >> answer;
+	   if (answer == 'y')
+	   {
+	   std::cout << "Continuing with restoring the image." << std::endl;
+	   }
+	   else
+	   {
+	   std::cout << "Please enter the Stripemap as an array beginning with the top row, starting with 1 as numeration. 0 is a parity block. Example: " << std::endl;
+	   std::cout << "1 \n 2 \n 0 \n 0 \n 3 \n 4 ..." << std::endl;
+	   for (unsigned int i = 0; i < mappe.size();++i)
+	   {
+	   for (unsigned int j = 0; j < mappe.at(i).size(); ++j)
+	   {
+	   std::cin >> mappe[i][j];
+	   }
+	   }
+	   }
+	 */
+	/*
+	 * DEBUG OUTPUT -  DO NOT ERASE ME
+	 *
+	 unsigned int *pointer = new unsigned int[results.size()]{}; 
+
+	 for (unsigned int i = 0; i < results.size(); ++i)
+	 {
+	 pointer[i] = 0;
+	 while (results.at(i).at(pointer[i]).first < 1024)
+	 {
+	 ++pointer[i];
+	 }
+	 }
+	 size_t lastAdress=0;
+	 while (true)
+	 {
+	 bool killMe = false;
+	 for (unsigned int i = 0; i < results.size(); ++i)
+	 {
+	 if (pointer[i] >= results.at(i).size())
+	 {
+	 killMe = true;
+	 break;
+	 }
+	 }
+	 if (killMe == true)
+	 break;
+	 size_t currentLowest = -1;
+	 for (unsigned int i = 0; i < results.size(); ++i)
+	 {
+	 size_t low = results.at(i).at(pointer[i]).first;
+	 currentLowest = std::min(currentLowest,low);
+	 }
+	 if (lastAdress + 32 < currentLowest)
+	 {
+	 lastAdress = currentLowest-32;
+	 }
+	 for (; lastAdress < currentLowest; lastAdress += inFiles.at(0)->getBlockSize()/1024)
+	 {
+	 std::cout << std::setw(10) << lastAdress << "\t";
+	 for (unsigned int i = 0; i < results.size(); ++i)
+	 {
+	 std::cout << std::setw(10) << "0.00000\t"; 
+	 }
+	 std::cout << std::endl;
+	 }
+	 std::cout << std::setw(10) << currentLowest << "\t";
+	 for (unsigned int i = 0; i < results.size(); ++i)
+	 {
+	 if (results.at(i).at(pointer[i]).first > currentLowest)
+	 {
+	 std::cout << std::setw(10) << "0.00000\t";
+	 } else
+	 {
+	 std::cout << std::setw(10) << (float)results.at(i).at(pointer[i]).second << "\t"; 
+	 pointer[i]++;
+	 }
+	 }
+	 std::cout << std::endl;
+	 lastAdress = currentLowest + inFiles.at(0)->getBlockSize();
+	 }
+	 */
+	std::vector<size_t> stripeMap;
 
 	/*
 	//find the device with the partition table
