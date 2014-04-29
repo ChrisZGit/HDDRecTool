@@ -2,6 +2,7 @@
 #define RAIDRECOVER_H
 
 #include <iostream>
+#include <string>
 
 #include <fileHandler.h>
 #include <raidSystem.h>
@@ -9,6 +10,7 @@
 class RaidRecover
 {
 	private:
+		std::string outP, inP;
 		FileHandler *handle;
 		RaidSystem *system;
 

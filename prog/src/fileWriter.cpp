@@ -3,6 +3,7 @@
 FileWriter::FileWriter(std::string path)
 {
 	outPath = path;
+	init = true;
 }
 
 FileWriter::~FileWriter()
@@ -12,7 +13,6 @@ FileWriter::~FileWriter()
 
 bool FileWriter::writeToFile(char *buf, size_t size)
 {
-	static bool init=true;
 	if (init == true)
 	{
 		fs.open(outPath.c_str(), std::fstream::out);

@@ -9,8 +9,6 @@
 #include <fileHandler.h>
 #include <defines.h>
 
-//#define CHECKSIZE 512
-
 enum Raid
 {
 	Raid0,
@@ -21,13 +19,6 @@ enum Raid
 	Raid_unknown
 };
 
-/*
-typedef struct pattern
-{
-	size_t drive;
-	bool isParity;
-} Pattern;
-*/
 class RaidSystem
 {
 private:
@@ -44,9 +35,8 @@ private:
 	bool checkForNull(char *in, size_t size);
 	bool checkForEqual(char *buf, char *in, size_t size);
 	bool easyCheck();
-	void loadDictionary(std::string in="/usr/share/dict/american-english");
 	bool calculateStripeSize();
-	bool buildDataImage();
+	bool buildDataImage(std::string path);
 
 public:
 	RaidSystem();
@@ -58,7 +48,7 @@ public:
 	void setLostImages(int i);
 
 	bool recoverLostImage();
-	bool raidCheck();
+	bool raidCheck(std::string path);
 
 //	std::vector<Pattern> getPattern();
 //	bool recoverLostImage();

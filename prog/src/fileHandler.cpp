@@ -39,7 +39,7 @@ FileHandler::FileHandler(std::string inputFolder, std::string outputFolder)
 		FileReader *a = new FileReader(imgs.at(i),maxSize);
 		inFiles.push_back(a);
 	}
-	writer = new FileWriter(outFolder+"recoveredImage.txt");
+	writer = new FileWriter(outFolder+"recoveredImage.dd");
 }
 
 void FileHandler::addImage(std::string path)
@@ -197,7 +197,6 @@ int FileHandler::estimateStripeSize()
 			}
 			++reloads;
 		} while (done == false);
-		std::cout << "\nThread: " << id << " finished entropies. Working on edges" << std::endl;
 		me->reset();
 
 		std::vector<size_t> adressEdges;
@@ -256,7 +255,6 @@ int FileHandler::estimateStripeSize()
 					counters[11] += 1;
 			}
 		}
-		std::cout << "Thread: " << id << " finished " << std::endl;
 		std::vector<int> ret;
 		for (int i = 0; i < 12; ++i)
 		{
@@ -482,12 +480,10 @@ std::vector<size_t> FileHandler::estimateStripeMap(bool isRaid5)
 	};
 	//lambda function end
 
-
-
 	for (size_t i = 0; i < inFiles.size(); ++i)
 	{
-	//	inFiles.at(i)->setBlockSize(inFiles.at(i)->getBlockSize());
-		inFiles.at(i)->setBlockSize(64*1024);
+		inFiles.at(i)->setBlockSize(inFiles.at(i)->getBlockSize());
+	//	inFiles.at(i)->setBlockSize(64*1024);
 	}
 
 	unsigned int NUM_THREADS = inFiles.size();
@@ -516,14 +512,13 @@ std::vector<size_t> FileHandler::estimateStripeMap(bool isRaid5)
 				}
 				if (status == std::future_status::ready)
 				{
-					//		std::cout << "Thread " << i << "\t pushed" << std::endl;
 					results.push_back(futureResults.at(i).get());
 				}
 			}
 		}
 	}
 	std::cout << std::endl;
-	std::cout << "Entropie calculation finished" << std::endl;
+	std::cout << "\tEntropie calculation finished" << std::endl;
 
 	std::vector<std::vector<std::pair<bool, std::vector<size_t>>>> map;
 	map.resize(results.size());
@@ -654,7 +649,7 @@ std::vector<size_t> FileHandler::estimateStripeMap(bool isRaid5)
 	int Ehits = 0;
 	int BClear, EClear;
 
-	for (int x = 0; x < map.size(); ++x)
+	for (unsigned int x = 0; x < map.size(); ++x)
 	{
 		int BPos=0;
 		int EPos=results.size()-1;
@@ -663,7 +658,7 @@ std::vector<size_t> FileHandler::estimateStripeMap(bool isRaid5)
 		while (!map.at(x).empty())
 		{
 			unchanged = true;
-			for (int i = 0; i < results.size(); ++i)
+			for (unsigned int i = 0; i < results.size(); ++i)
 			{
 				hits[i] = 0;
 			}
@@ -671,7 +666,7 @@ std::vector<size_t> FileHandler::estimateStripeMap(bool isRaid5)
 			Ehits = 0;
 			BClear=-1;
 			EClear=-1;
-			for (int j = 0; j < map.at(x).size(); ++j)
+			for (unsigned int j = 0; j < map.at(x).size(); ++j)
 			{
 				if (map.at(x).at(j).first == true)
 				{
@@ -691,7 +686,7 @@ std::vector<size_t> FileHandler::estimateStripeMap(bool isRaid5)
 					}
 				}
 			}
-			for (int i = 0; i < results.size(); ++i)
+			for (unsigned int i = 0; i < results.size(); ++i)
 			{
 				if ((hits[i]%4096) > 0.6f*Bhits)
 				{
@@ -712,7 +707,7 @@ std::vector<size_t> FileHandler::estimateStripeMap(bool isRaid5)
 				map.at(x).clear();
 				continue;
 			}
-			for (int j = 0; j < map.at(x).size(); ++j)
+			for (unsigned int j = 0; j < map.at(x).size(); ++j)
 			{
 				if (map.at(x).at(j).first == true)
 				{
@@ -723,7 +718,7 @@ std::vector<size_t> FileHandler::estimateStripeMap(bool isRaid5)
 					}
 					for (unsigned int t = 0; t < map.at(x).at(j).second.size(); ++t)
 					{
-						if (map.at(x).at(j).second.at(t) == BClear)
+						if ((int)map.at(x).at(j).second.at(t) == BClear)
 						{
 							map.at(x).at(j).second.erase(map.at(x).at(j).second.begin()+t);
 						}
@@ -737,7 +732,7 @@ std::vector<size_t> FileHandler::estimateStripeMap(bool isRaid5)
 					}
 					for (unsigned int t = 0; t < map.at(x).at(j).second.size(); ++t)
 					{
-						if (map.at(x).at(j).second.at(t) == EClear)
+						if ((int)map.at(x).at(j).second.at(t) == EClear)
 						{
 							map.at(x).at(j).second.erase(map.at(x).at(j).second.begin()+t);
 						}
@@ -746,24 +741,114 @@ std::vector<size_t> FileHandler::estimateStripeMap(bool isRaid5)
 			}
 		}
 	}
+	std::vector<size_t> stripeMap;
 
-	std::cout << "Found this map: " << std::endl;
-	for (unsigned int i = 0; i < mappe.size();++i)
+	if (isRaid5 == true)
 	{
-		for (unsigned int j = 0; j < mappe.at(i).size(); ++j)
+		std::vector<int> parities;
+		parities.resize(results.size(),-1);
+		int p=0;
+		for (unsigned int i = 0; i < mappe.size();++i)
 		{
-			if (mappe.at(i).at(j) == -2)
+			bool hit = false;
+			for (unsigned int j = 0; j < mappe.at(i).size(); ++j)
 			{
-				std::cout << "P" << "\t";
-			} else
-			{
-				std::cout << mappe.at(i).at(j) << "\t";
+				if (mappe.at(i).at(j) == -1)
+				{
+					if (hit == true)
+					{
+						hit = false;
+						break;
+					}
+					p = j;
+					hit = true;
+				}
 			}
+			if (hit == true)
+			{
+				mappe.at(i).at(p) = -2;
+				parities.at(p) = p;
+			}
+		}
+		bool solutionFound=true;
+		for (auto in : parities)
+		{
+			if (in == -1)
+			{
+				solutionFound = false;
+			}
+		}
+		if (solutionFound == false)
+		{
+			std::vector<int> missing;
+			for (unsigned int i = 0; i < parities.size(); ++i)
+			{
+				if (parities.at(i) == -1)
+					missing.push_back(i);
+			}
+			for (unsigned int i = 0; i < mappe.size();++i)
+			{
+				for (unsigned int j = 0; j < mappe.at(i).size(); ++j)
+				{
+					bool used=false;
+					if (mappe.at(i).at(j) == -1)
+					{
+						for (unsigned int k = 0; k < missing.size(); ++k)
+						{
+							if (missing.at(k) == (int)j)
+							{
+								used=true;
+								mappe.at(i).at(j) = -2;
+								missing.erase(missing.begin()+k);
+							}
+						}
+						if (used==true)
+							break;
+					}
+				}
+			}
+		}
+
+		std::cout << "Found this map: " << std::endl;
+		for (unsigned int i = 0; i < mappe.size();++i)
+		{
+			int next = 0;
+			while (next < (int)results.size()-1)
+			{
+				for (unsigned int j = 0; j < mappe.at(i).size(); ++j)
+				{
+					if (mappe.at(i).at(j) == -2 && next == 0)
+					{
+						std::cout << "P" << "\t";
+					} else
+					{
+						if (next == 0)
+							std::cout << mappe.at(i).at(j) << "\t";
+						if (next == mappe.at(i).at(j))
+							stripeMap.push_back(j);
+					}
+				}
+				next++;
+			}
+			std::cout << std::endl;
+		}
+	} else
+	{
+		std::cout << "Found this map: " << std::endl;
+		int next = 0;
+		while (next < (int)results.size())
+		{
+			for (unsigned int j = 0; j < mappe.at(0).size(); ++j)
+			{
+				if (next == mappe.at(0).at(j))
+					stripeMap.push_back(j);
+				if (next == 0)
+					std::cout << mappe.at(0).at(j) << "\t";
+			}
+			next++;
 		}
 		std::cout << std::endl;
 	}
-
-
 	/*
 	   char answer;
 	   std::cout << "Are you happy with the estimated Stripemap? [y/n] ";
@@ -847,7 +932,6 @@ std::vector<size_t> FileHandler::estimateStripeMap(bool isRaid5)
 	 lastAdress = currentLowest + inFiles.at(0)->getBlockSize();
 	 }
 	 */
-	std::vector<size_t> stripeMap;
 
 	/*
 	//find the device with the partition table

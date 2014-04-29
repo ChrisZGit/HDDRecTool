@@ -9,6 +9,7 @@ class FileWriter
 private:
 	std::ofstream fs;
 	std::string outPath;
+	bool init;
 
 public:
 	FileWriter();

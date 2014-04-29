@@ -7,6 +7,8 @@ RaidRecover::RaidRecover()
 
 RaidRecover::RaidRecover(std::string inPath, std::string outPath)
 {
+	outP = outPath;
+	inP = inPath;
 	handle = new FileHandler(inPath, outPath);
 	system = new RaidSystem(handle);
 }
@@ -28,7 +30,9 @@ void RaidRecover::setRaid(int i)
 
 void RaidRecover::run()
 {
-	bool found = system->raidCheck();
+	std::string o = outP+"dataImage.dd";
+	bool found = system->raidCheck(o);
+	std::cout << std::endl;
 	if (found==true)
 		std::cout << "Recovery successful: " << system->getRaid() << std::endl;
 	else
