@@ -407,14 +407,14 @@ bool RaidSystem::raidCheck(std::string path)
 		} else 
 		{
 			char answer;
-			std::cout << "Do you want to accept this? [y/n]";
-			//std::cin >> answer;
-			//if (answer == 'n')
+			std::cout << "Do you want to accept this? [y/n] ";
+			std::cin >> answer;
+			if (answer == 'n')
 			{
 				std::cout << "Raid Version can not be estimated automatically. Must be handed over with the program start." << std::endl;
-				//	return false;
+				return false;
 			}
-			//std::cout << "Found a raid version with the easy check: 5" << raidSystem  << std::endl;
+//			std::cout << "Found a raid version with the easy check: " << raidSystem  << std::endl;
 		}
 	} else if (raidSystem == Raid5_user)
 	{
@@ -513,6 +513,7 @@ bool RaidSystem::raidCheck(std::string path)
 	}
 	else
 	{
+		std::cout << "Beginning to build the imagefile from the raid-devices." << std::endl;
 		found = buildDataImage(path);
 	}
 

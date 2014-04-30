@@ -347,11 +347,11 @@ int FileHandler::estimateStripeSize()
 		return false;
 	}
 	std::cout << "It's probably:\t" << stripeSize << std::endl;
-	char answer='y';
+	char answer;
 	std::cout << "Estimated Stripesize: " << stripeSize << "KB" << std::endl;
 	std::cout << "It's just with simple heuristic. Would you like to continue with this result?" << std::endl;
 	std::cout << "Answer with 'y' for 'yes', 'n' for 'no' or 'h' for 'hint' [y/n/h] ";
-	//std::cin >> answer;
+	std::cin >> answer;
 	if (answer == 'y')
 	{
 		stripeSize *= 1024;
@@ -849,27 +849,27 @@ std::vector<size_t> FileHandler::estimateStripeMap(bool isRaid5)
 		}
 		std::cout << std::endl;
 	}
-	/*
-	   char answer;
-	   std::cout << "Are you happy with the estimated Stripemap? [y/n] ";
-	   std::cin >> answer;
-	   if (answer == 'y')
-	   {
+	
+   char answer;
+   std::cout << "Are you happy with the estimated Stripemap? [y/n] ";
+   std::cin >> answer;
+   if (answer == 'y')
+   {
 	   std::cout << "Continuing with restoring the image." << std::endl;
-	   }
-	   else
-	   {
+   }
+   else
+   {
 	   std::cout << "Please enter the Stripemap as an array beginning with the top row, starting with 1 as numeration. 0 is a parity block. Example: " << std::endl;
 	   std::cout << "1 \n 2 \n 0 \n 0 \n 3 \n 4 ..." << std::endl;
 	   for (unsigned int i = 0; i < mappe.size();++i)
 	   {
-	   for (unsigned int j = 0; j < mappe.at(i).size(); ++j)
-	   {
-	   std::cin >> mappe[i][j];
+		   for (unsigned int j = 0; j < mappe.at(i).size(); ++j)
+		   {
+			   std::cin >> mappe[i][j];
+		   }
 	   }
-	   }
-	   }
-	 */
+   }
+	 
 	/*
 	 * DEBUG OUTPUT -  DO NOT ERASE ME
 	 *
@@ -932,26 +932,6 @@ std::vector<size_t> FileHandler::estimateStripeMap(bool isRaid5)
 	 lastAdress = currentLowest + inFiles.at(0)->getBlockSize();
 	 }
 	 */
-
-	/*
-	//find the device with the partition table
-	//estimate it right there
-	std::pair<int,bool> test(0, false);
-	stripeMap.push_back(test);
-	test.first = 1;
-	stripeMap.push_back(test);
-	test.first = 2;
-	stripeMap.push_back(test);
-	test.first = 3;
-	stripeMap.push_back(test);
-
-	//search for a part, where the stripe map can be estimated
-	 */
-	//fill the vector
-
-
-	//sort it then, knowing which one the first is, and estimate the other two
-
 
 	for (size_t i = 0; i < inFiles.size(); ++i)
 	{
