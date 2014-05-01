@@ -324,7 +324,7 @@ bool RaidSystem::buildDataImage(std::string path)
 					buffer[j+(i)*stripeSize] = tmp[j];
 				}
 			}
-			written += bufferSize/1024.0f/1024.0f;
+			written += stripeSize/1024.0f/1024.0f;
 			printf("\r%f MB finished", written);
 			writeMe->writeToFile(buffer, stripeSize*inFiles.size());
 			for (unsigned int i = 0; i < inFiles.size(); ++i)

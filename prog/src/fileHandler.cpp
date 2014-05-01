@@ -37,7 +37,7 @@ FileHandler::FileHandler(std::string inputFolder, std::string outputFolder)
 	maxSize = (BUFLENGTH/(imgs.size()+1))/2*2;
 	maxSize = maxSize/(1024*1024);
 	maxSize = maxSize*(1024*1024);
-	maxSize = std::min(maxSize,128*1024*1024);
+	maxSize = std::min(maxSize,256*1024*1024);
 	std::cout << "Image-Buffers:\t" << maxSize/1024/1024 << "MB" << std::endl;
 	for (unsigned int i = 0; i < imgs.size(); ++i)
 	{

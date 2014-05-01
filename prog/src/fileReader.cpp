@@ -7,11 +7,21 @@ FileReader::FileReader(std::string inPath, size_t size)
 {
 	path=inPath;
 	bufferLength = size;
+
+	fs.open(path.c_str(), std::fstream::in | std::fstream::ate | std::fstream::binary);
+	fs.peek();
+	allSize = fs.tellg();
+	fs.close();
 	fs.open(path.c_str(), std::fstream::in | std::fstream::binary);
+	std::cout << allSize << std::endl;
+	pbuf = fs.rdbuf();
+	//allSize = pbuf->pubseekoff(0,fs.end,fs.in);
+	pbuf->pubseekoff(0,fs.beg);
+
 	loadBuffer = new char[bufferLength];
 	workBuffer = new char[bufferLength];
 	localLoad = true;
-	if (fs==NULL)
+	if (!fs.is_open())
 	{
 		std::cerr << "ERROR FileReader::FileReader - Couldnt open file: " << path << std::endl;
 	}
@@ -191,7 +201,8 @@ bool FileReader::asyncReload()
 			}
 			localMtx.lock();
 		}
-		if (threadSync.get()==false || endOfLoadBuf==0 || fs.bad() || fs.eof())
+		//if (threadSync.get()==false || endOfLoadBuf==0 || fs.bad() || fs.eof())
+		if (threadSync.get()==false || endOfLoadBuf==0 /*|| fs.bad() || fs.eof()*/)
 		{
 			localLoad = true;
 			localMtx.unlock();
@@ -251,13 +262,26 @@ bool FileReader::reloadBuffer()
 	}
 	loadAvail = false;
 	mtx.unlock();
-	if (fs.is_open() && fs.good() && !(fs.eof()))
+	//if (fs.is_open() && fs.good() && !(fs.eof()))
 	{
-	 	endOfLoadBuf = fs.readsome((char *)loadBuffer, bufferLength);
+		size_t maxSize = bufferLength;
+		if (allSize < bufferLength)
+		{
+			maxSize = allSize;
+			allSize = 0;
+		} else
+		{
+			allSize -= bufferLength;
+		}
+		//usleep(100000);
+	 	//endOfLoadBuf = fs.readsome((char *)loadBuffer, bufferLength);
+		pbuf->sgetn(loadBuffer, maxSize);
+		endOfLoadBuf = maxSize;
 		//offset = 0;
 		//globalAdress += bufferLength;
 	} 
-	if (fs.bad() || endOfLoadBuf==0 || fs.eof())
+	//if (fs.bad() || endOfLoadBuf==0 || fs.eof())
+	if (endOfLoadBuf==0)
 	{
 		mtx.lock();
 		loadAvail=true;
@@ -296,7 +320,19 @@ void FileReader::reset()
 	}
 	localLoad = false;
 	localMtx.unlock();
-	if (fs.good())
+	//if (fs.good())
+	{
+		fs.open(path.c_str(), std::fstream::in | std::fstream::ate | std::fstream::binary);
+		fs.peek();
+		allSize = fs.tellg();
+		fs.close();
+		fs.open(path.c_str(), std::fstream::in | std::fstream::binary);
+		pbuf = fs.rdbuf();
+		pbuf->pubseekoff(0,fs.beg);
+		//	pbuf->pubseekoff(0,fs.beg);
+	//	allSize = pbuf->pubseekoff(0,fs.end,fs.in);
+	//	pbuf->pubseekoff(0,fs.beg);
+	}
 		fs.seekg(0);
 	reloadBuffer();
 	globalAdress = 0;

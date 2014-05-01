@@ -20,6 +20,8 @@ private:
 	char *workBuffer;
 	char *block;
 
+	size_t allSize;
+	std::filebuf *pbuf;
 	volatile bool localLoad;
 	std::future<bool> threadSync;
 	std::mutex localMtx;
