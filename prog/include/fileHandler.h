@@ -36,6 +36,7 @@ public:
 	void reset();
 	int findStringInBlock(std::string seek);
 	bool reloadBuffers();
+	void setBlockSize(size_t block);
 	int findString(std::string seek);
 	
 	std::vector<FileReader*> getInFiles();

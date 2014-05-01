@@ -2,6 +2,9 @@
 
 static int maxSize;
 
+volatile bool loadAvail;
+std::mutex mtx;
+
 FileHandler::FileHandler(std::string inputFolder, std::string outputFolder)
 {
 	inFolder = inputFolder;
@@ -9,6 +12,7 @@ FileHandler::FileHandler(std::string inputFolder, std::string outputFolder)
 	DIR *dpdf;
 	struct dirent *epdf;
 
+	loadAvail = true;
 	std::vector<std::string> imgs;
 
 	dpdf = opendir(inputFolder.c_str());
@@ -29,17 +33,18 @@ FileHandler::FileHandler(std::string inputFolder, std::string outputFolder)
 		std::cerr << "No valid directory or no valid datas in directory" << std::endl;
 		exit(EXIT_FAILURE);
 	}
+	
 	maxSize = (BUFLENGTH/(imgs.size()+1))/2*2;
-	maxSize = maxSize/BLOCKSIZE;
-	maxSize = maxSize*BLOCKSIZE;
-	maxSize = std::min(maxSize,256*1024*1024);
+	maxSize = maxSize/(1024*1024);
+	maxSize = maxSize*(1024*1024);
+	maxSize = std::min(maxSize,128*1024*1024);
 	std::cout << "Image-Buffers:\t" << maxSize/1024/1024 << "MB" << std::endl;
 	for (unsigned int i = 0; i < imgs.size(); ++i)
 	{
 		FileReader *a = new FileReader(imgs.at(i),maxSize);
 		inFiles.push_back(a);
 	}
-	writer = new FileWriter(outFolder+"recoveredImage.dd");
+	writer = new FileWriter(outFolder+"recoveredImage.dd",maxSize);
 }
 
 void FileHandler::addImage(std::string path)
@@ -146,14 +151,20 @@ bool FileHandler::findGoodBlock()
 	return true;
 }
 
+void FileHandler::setBlockSize(size_t block)
+{
+	for (auto in : inFiles)
+		in->setBlockSize(block);
+}
+	
+
 int FileHandler::estimateStripeSize()
 {
-	auto lambda = [&] (size_t id) -> std::vector<int>
+	auto lambda = [&] (FileReader *me) -> std::vector<int>
 	{
 		const int CHECKS = 64*1024*1024;
 		std::vector<std::pair<size_t, float>> entropies[12];
 		//std::vector<std::pair<size_t, float>> entropies;
-		FileReader *me = inFiles.at(id);
 		me->reset();
 		int done=0;
 		int counters[12]={};
@@ -184,12 +195,10 @@ int FileHandler::estimateStripeSize()
 				if (entropies[i].size() < CHECKS)
 					done--;
 			}
-			std::string wr = "Thread ";
-			wr += std::to_string(id);
-			wr += " working ";
+			std::string wr = "Threads working";
 			printf("\r%s\t",wr.c_str());
 			fflush(stdout);
-			if (done == 11)
+			if (done == 12)
 				break;
 			if (me->asyncReload()==false)
 			{
@@ -270,7 +279,7 @@ int FileHandler::estimateStripeSize()
 	std::vector<std::vector<int>> results;
 	for (size_t i = 0; i < NUM_THREADS; ++i)
 	{
-		futureResults[i] = std::async(std::launch::async, lambda, i);
+		futureResults[i] = std::async(std::launch::async, lambda, inFiles.at(i));
 	}
 	std::future_status status;
 	while (results.size() < inFiles.size())
@@ -308,6 +317,8 @@ int FileHandler::estimateStripeSize()
 	int index = 0;
 	for (unsigned int i = 1; i < 12; ++i)
 	{
+		if (counters[i-1] == 0 || counters[i] == 0)
+			continue;
 		float tmp = (float)counters[i-1]/(float)counters[i]; 
 		if (tmp < min)
 		{
@@ -436,11 +447,10 @@ int FileHandler::estimateStripeSize()
 
 std::vector<size_t> FileHandler::estimateStripeMap(bool isRaid5)
 {
-	auto lambda = [&] (size_t id) -> std::vector<std::pair<size_t, float>>
+	auto lambda = [&] (FileReader *me) -> std::vector<std::pair<size_t, float>>
 	{
 		const int CHECKS = 64*1024*1024;
 		std::vector<std::pair<size_t, float>> entropies;
-		FileReader *me = inFiles.at(id);
 		me->reset();
 
 		int offset=0;
@@ -465,9 +475,7 @@ std::vector<size_t> FileHandler::estimateStripeMap(bool isRaid5)
 				if (entropies.size() >= CHECKS)
 					break;
 			}
-			std::string wr = "Thread ";
-			wr += std::to_string(id);
-			wr += " working ";
+			std::string wr = "Threads working\t";
 			printf("\r%s\t",wr.c_str());
 			fflush(stdout);
 			if (me->asyncReload()==false)
@@ -476,15 +484,10 @@ std::vector<size_t> FileHandler::estimateStripeMap(bool isRaid5)
 			}
 			++reloads;
 		} while (entropies.size() < CHECKS);
+		me->reset();
 		return entropies;
 	};
 	//lambda function end
-
-	for (size_t i = 0; i < inFiles.size(); ++i)
-	{
-		inFiles.at(i)->setBlockSize(inFiles.at(i)->getBlockSize());
-	//	inFiles.at(i)->setBlockSize(64*1024);
-	}
 
 	unsigned int NUM_THREADS = inFiles.size();
 	std::vector<std::pair<size_t, float>> entropies;
@@ -493,7 +496,7 @@ std::vector<size_t> FileHandler::estimateStripeMap(bool isRaid5)
 	std::vector<std::vector<std::pair<size_t,float>>> results;
 	for (size_t i = 0; i < NUM_THREADS; ++i)
 	{
-		futureResults[i] = std::async(std::launch::async, lambda, i);
+		futureResults[i] = std::async(std::launch::async, lambda, inFiles.at(i));
 	}
 	std::future_status status;
 	while (results.size() < inFiles.size())
@@ -512,7 +515,12 @@ std::vector<size_t> FileHandler::estimateStripeMap(bool isRaid5)
 				}
 				if (status == std::future_status::ready)
 				{
-					results.push_back(futureResults.at(i).get());
+					std::vector<std::pair<size_t, float>> ent = futureResults.at(i).get();
+					if (ent.empty())
+					{
+						std::cout << "Empty at " << i << std::endl;
+					}
+					results.push_back(ent);
 				}
 			}
 		}

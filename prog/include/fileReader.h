@@ -24,6 +24,7 @@ private:
 	std::future<bool> threadSync;
 	std::mutex localMtx;
 
+	int readSize;
 	size_t globalAdress;
 	size_t endOfLoadBuf;
 	size_t endOfWorkBuf;
@@ -38,7 +39,7 @@ public:
 	FileReader(std::string inPath, size_t size);
 
 	size_t getBufferLength() {return std::min(bufferLength,endOfWorkBuf);}
-	size_t getBlockSize() {return blockSize;}
+	size_t getBlockSize() {return readSize;}
 
 	char *getBuffer();
 	size_t getBufferSize();

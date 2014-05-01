@@ -215,8 +215,11 @@ bool RaidSystem::calculateStripeSize()
 
 bool RaidSystem::buildDataImage(std::string path)
 {
-	FileWriter writeMe(path);
 	std::vector<FileReader *> inFiles = handle->getInFiles();
+	FileWriter *writeMe = handle->getFileWriter();
+	writeMe->setPath(path);
+	handle->reset();
+	
 	for (unsigned int j = 0; j < inFiles.size(); ++j)
 	{
 		inFiles.at(j)->reset();
@@ -224,6 +227,7 @@ bool RaidSystem::buildDataImage(std::string path)
 	}
 	if (raidSystem == Raid5_user || raidSystem == Raid5_incomplete || raidSystem == Raid5_complete)
 	{
+		unsigned int finished = 0;
 		const size_t bufferSize=(inFiles.size()-1)*stripeSize;
 		char *buffer = new char[bufferSize];
 		int *blocks = new int[inFiles.size()]{};
@@ -243,6 +247,7 @@ bool RaidSystem::buildDataImage(std::string path)
 				blocks[stripeMap.at(i+pointer)]=order++;
 			}
 			order = 0;
+			size_t skip = 0;
 			do
 			{
 				for (unsigned int i = 0; i < inFiles.size(); ++i)
@@ -254,8 +259,7 @@ bool RaidSystem::buildDataImage(std::string path)
 						{
 							if (inFiles.at(i)->asyncReload()== false )
 							{
-								writeMe.closeFile();
-								return true;
+								++finished;
 							}
 						}
 						order++;
@@ -264,27 +268,40 @@ bool RaidSystem::buildDataImage(std::string path)
 					if (blocks[i] == order && order > 0)
 					{
 						char *tmp = inFiles.at(i)->getBuffer();
+						stripeSize = inFiles.at(i)->getBlockSize();
 						for (int j = 0; j < stripeSize; ++j)
 						{
-							buffer[j+(order-1)*stripeSize] = tmp[j];
+							buffer[j+skip] = tmp[j];
 							parity[j] = parity[j]^buffer[j];
 						}
+						skip += stripeSize;
 						if (inFiles.at(i)->newBlock() == false)
 						{
 							if (inFiles.at(i)->asyncReload()== false )
 							{
-								writeMe.closeFile();
-								return true;
+								++finished;
 							}
 						}
 						++order;
 					}
 				}
+				if (finished == inFiles.size())
+				{
+					writeMe->writeToFile(buffer, skip);
+					writeMe->closeFile();
+					return true;
+				}
 			} while ((unsigned int)order < inFiles.size());
-			written += bufferSize/1024.0f/1024.0f;
+			written += skip/1024.0f/1024.0f;
 			printf("\r%f MB finished", written);
-			writeMe.writeToFile(buffer, bufferSize);
+			writeMe->writeToFile(buffer, skip);
 			pointer = (pointer + inFiles.size()-1)%((stripeMap.size()));
+				if (finished == inFiles.size())
+				{
+				//	writeMe->writeToFile(buffer, skip);
+					writeMe->closeFile();
+					return true;
+				}
 		}
 		return true;
 	} else if (raidSystem == Raid1)
@@ -298,20 +315,10 @@ bool RaidSystem::buildDataImage(std::string path)
 		double written = 0.0f;
 		while (true)
 		{
-			for (unsigned int i = 0; i < inFiles.size(); ++i)
-			{
-				if (inFiles.at(i)->newBlock() == false)
-				{
-					if (inFiles.at(i)->asyncReload()== false )
-					{
-						writeMe.closeFile();
-						return true;
-					}
-				}
-			}
+			stripeSize = inFiles.at(0)->getBlockSize();
 			for (unsigned int i = 0; i < stripeMap.size(); ++i)
 			{
-				char *tmp = inFiles.at(i)->getBuffer();
+				char *tmp = inFiles.at(stripeMap.at(i))->getBuffer();
 				for (int j = 0; j < stripeSize; ++j)
 				{
 					buffer[j+(i)*stripeSize] = tmp[j];
@@ -319,7 +326,18 @@ bool RaidSystem::buildDataImage(std::string path)
 			}
 			written += bufferSize/1024.0f/1024.0f;
 			printf("\r%f MB finished", written);
-			writeMe.writeToFile(buffer, bufferSize);
+			writeMe->writeToFile(buffer, stripeSize*inFiles.size());
+			for (unsigned int i = 0; i < inFiles.size(); ++i)
+			{
+				if (inFiles.at(i)->newBlock() == false)
+				{
+					if (inFiles.at(i)->asyncReload()== false )
+					{
+						writeMe->closeFile();
+						return true;
+					}
+				}
+			}
 		}
 		return true;
 	} else
@@ -340,20 +358,23 @@ bool RaidSystem::recoverLostImage()
 	}
 	std::vector<FileReader *> inFiles = handle->getInFiles();
 	for (unsigned int j = 0; j < inFiles.size(); ++j)
+	{
 		inFiles.at(j)->reset();
+		inFiles.at(j)->setBlockSize(128*1024);
+	}
 	if (raidSystem == Raid5_incomplete)
 	{
-		size_t bufferlength = inFiles.at(0)->getBufferLength();
-		//		size_t blocklength = inFiles.at(0)->getBlockSize();
+		//size_t bufferlength = inFiles.at(0)->getBufferLength();
+		size_t blocklength = inFiles.at(0)->getBlockSize();
 		double written = 0.0f;
 		size_t runs=0;
-		char *buf = new char[bufferlength];
+		char *buf = new char[blocklength];
 		for (unsigned int j = 0; j < inFiles.size(); ++j)
 			inFiles.at(j)->reset();
 		while (true)
 		{
-			bufferlength = inFiles.at(0)->getBufferLength();
-			for (unsigned int i = 0; i < bufferlength; ++i)
+			blocklength = inFiles.at(0)->getBlockSize();
+			for (unsigned int i = 0; i < blocklength; ++i)
 			{
 				buf[i] = 0;
 			}
@@ -362,24 +383,27 @@ bool RaidSystem::recoverLostImage()
 			{
 				FileReader *reader = inFiles.at(j);
 				char *read = reader->getBuffer();
-				for (unsigned int i = 0; i < bufferlength; ++i)
+				for (unsigned int i = 0; i < blocklength; ++i)
 				{
 					buf[i] = buf[i]^read[i];
 				}
 			}
-			handle->getFileWriter()->writeToFile(buf,bufferlength);
-			written += bufferlength/1024.0f/1024.0f;
+			handle->getFileWriter()->writeToFile(buf,blocklength);
+			written += blocklength/1024.0f/1024.0f;
 			printf("\r%f MB finished", written);
 			fflush(stdout);
 			for (unsigned int j = 0; j < inFiles.size(); ++j)
 			{
-				if (inFiles.at(j)->asyncReload() == false)
+				if (inFiles.at(j)->newBlock() == false)
 				{
-					handle->getFileWriter()->closeFile();
-					std::cout << std::endl;
-					for (unsigned int t = 0; t < inFiles.size(); ++t)
-						inFiles.at(t)->reset();
-					return true;
+					if (inFiles.at(j)->asyncReload() == false)
+					{
+						handle->getFileWriter()->closeFile();
+						std::cout << std::endl;
+						for (unsigned int t = 0; t < inFiles.size(); ++t)
+							inFiles.at(t)->reset();
+						return true;
+					}
 				}
 			}
 		}
@@ -492,6 +516,7 @@ bool RaidSystem::raidCheck(std::string path)
 		std::cerr << "No valid Stripesize found. User should estimate it on its own, or Image could not be recovered." << std::endl;
 		return false;
 	}
+	handle->setBlockSize(stripeSize);
 
 	std::cout << "Trying to estimate the stripemap." << std::endl;
 	if (raidSystem == Raid5_user || raidSystem == Raid5_incomplete || raidSystem == Raid5_complete)

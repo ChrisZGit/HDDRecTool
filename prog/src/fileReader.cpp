@@ -1,13 +1,13 @@
 #include <fileReader.h>
 
-static volatile bool loadAvail=true;
-static std::mutex mtx;
+extern volatile bool loadAvail;
+extern std::mutex mtx;
 
 FileReader::FileReader(std::string inPath, size_t size)
 {
 	path=inPath;
 	bufferLength = size;
-	fs.open(path.c_str(), std::fstream::in);
+	fs.open(path.c_str(), std::fstream::in | std::fstream::binary);
 	loadBuffer = new char[bufferLength];
 	workBuffer = new char[bufferLength];
 	localLoad = true;
@@ -17,6 +17,7 @@ FileReader::FileReader(std::string inPath, size_t size)
 	}
 	endOfLoadBuf = 0;
 	blockSize = BLOCKSIZE;
+	readSize = blockSize;
 	reloadBuffer();
 	globalAdress = 0;
 	offset = 0;
@@ -30,21 +31,21 @@ char *FileReader::getBuffer()
 
 size_t FileReader::getBufferSize()
 {
-	return blockSize;
+	return readSize;
 }
 
 float FileReader::calcEntropyOfCurrentBlock()
 {
 	float ret = 0.0f;
 	unsigned int possibleVals[256]={};
-	for (unsigned int i = 0; i < blockSize; ++i)
+	for (int i = 0; i < readSize; ++i)
 	{
 		possibleVals[(unsigned char)block[i]] += 1;
 	}
 	float tmp;
 	for (unsigned int i = 0; i < 256; ++i)
 	{
-		tmp = (float)possibleVals[i]/(float)blockSize;
+		tmp = (float)possibleVals[i]/(float)readSize;
 		if (tmp>0)
 			ret += -tmp * std::log2(tmp);
 	}
@@ -61,7 +62,7 @@ bool FileReader::emptyBlock()
 
 void FileReader::printBlock()
 {
-	for (unsigned int i = 0; i < blockSize; i = i+16)
+	for (int i = 0; i < readSize; i = i+16)
 	{
 		for (int j = 0; j < 16; ++j)
 		{
@@ -124,9 +125,9 @@ void FileReader::setOffset(size_t off)
 
 int FileReader::findFirstNonemptyBlock(int add)
 {
-	for (size_t i = offset+add; i+blockSize < endOfWorkBuf; i += blockSize)
+	for (size_t i = offset+add; i+readSize < endOfWorkBuf; i += readSize)
 	{
-		for (size_t j = 0; j < blockSize; ++j)
+		for (int j = 0; j < readSize; ++j)
 		{
 			if (workBuffer[i+j] > 0)
 			{
@@ -148,6 +149,7 @@ bool FileReader::skipInputBuffer(int NumOfBuffers)
 void FileReader::setBlockSize(size_t blockS)
 {
 	this->blockSize=blockS;
+	this->readSize=blockS;
 }
 
 bool FileReader::asyncReload()
@@ -221,7 +223,14 @@ bool FileReader::asyncReload()
 	globalAdress += bufferLength;
 	mtx.unlock();
 	//std::cout << globalAdress << "\t" << endOfWorkBuf << std::endl;
+	if (endOfWorkBuf == 0)
+	{
+		localLoad = true;
+		localMtx.unlock();
+		return false;
+	}
 
+	readSize = blockSize;
 	localLoad = false;
 	localMtx.unlock();
 
@@ -244,7 +253,7 @@ bool FileReader::reloadBuffer()
 	mtx.unlock();
 	if (fs.is_open() && fs.good() && !(fs.eof()))
 	{
-		endOfLoadBuf = fs.readsome((char *)loadBuffer, bufferLength);
+	 	endOfLoadBuf = fs.readsome((char *)loadBuffer, bufferLength);
 		//offset = 0;
 		//globalAdress += bufferLength;
 	} 
@@ -268,9 +277,10 @@ bool FileReader::newBlock()
 	offset += blockSize;
 	if (offset+blockSize > endOfWorkBuf)
 	{
-		offset -= blockSize;
-		return false;
+		readSize = (int)(endOfWorkBuf)-(int)offset;
 	}
+	if (readSize <= 0)
+		return false;
 	block = &workBuffer[offset];
 	return true;
 }
