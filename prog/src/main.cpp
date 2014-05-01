@@ -75,7 +75,7 @@ int main(int argc, char *argv[])
 	//Raid System was set
 	if (raidVersion != 0 && raidVersion != 1 && raidVersion != 5)
 	{
-		std::cout << "No useful version was set. Tool is trying to estimate it on it's own." << std::endl;
+		//std::cout << "No useful version was set. Tool is trying to estimate it on it's own." << std::endl;
 	} else
 	{
 		raidR.setRaid(raidVersion);
