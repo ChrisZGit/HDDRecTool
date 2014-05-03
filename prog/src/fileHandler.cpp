@@ -1,18 +1,17 @@
 #include <fileHandler.h>
 
 static int maxSize;
-
 volatile bool loadAvail;
 std::mutex mtx;
 
 FileHandler::FileHandler(std::string inputFolder, std::string outputFolder)
 {
+	loadAvail = true;
 	inFolder = inputFolder;
 	outFolder = outputFolder;
 	DIR *dpdf;
 	struct dirent *epdf;
 
-	loadAvail = true;
 	std::vector<std::string> imgs;
 
 	dpdf = opendir(inputFolder.c_str());
@@ -33,10 +32,9 @@ FileHandler::FileHandler(std::string inputFolder, std::string outputFolder)
 		std::cerr << "No valid directory or no valid datas in directory" << std::endl;
 		exit(EXIT_FAILURE);
 	}
-	
 	maxSize = (BUFLENGTH/(imgs.size()+1))/2*2;
-	maxSize = maxSize/(1024*1024);
-	maxSize = maxSize*(1024*1024);
+	maxSize = maxSize/BLOCKSIZE;
+	maxSize = maxSize*BLOCKSIZE;
 	maxSize = std::min(maxSize,256*1024*1024);
 	std::cout << "Image-Buffers:\t" << maxSize/1024/1024 << "MB" << std::endl;
 	for (unsigned int i = 0; i < imgs.size(); ++i)
@@ -62,6 +60,11 @@ void FileHandler::addImage(std::string path)
 		FileReader *a = new FileReader(path,maxSize);
 		inFiles.push_back(a);
 	}
+}
+void FileHandler::setBlockSize(size_t blocksize)
+{
+	for (size_t i = 0; i < inFiles.size(); ++i)
+		inFiles.at(i)->setBlockSize(blocksize);
 }
 
 bool FileHandler::findGoodBlock()
@@ -151,24 +154,19 @@ bool FileHandler::findGoodBlock()
 	return true;
 }
 
-void FileHandler::setBlockSize(size_t block)
-{
-	for (auto in : inFiles)
-		in->setBlockSize(block);
-}
-	
-
 int FileHandler::estimateStripeSize()
 {
-	auto lambda = [&] (FileReader *me) -> std::vector<int>
+	auto lambda = [&] (size_t id) -> std::vector<int>
 	{
 		const int CHECKS = 64*1024*1024;
 		std::vector<std::pair<size_t, float>> entropies[12];
 		//std::vector<std::pair<size_t, float>> entropies;
+		FileReader *me = inFiles.at(id);
 		me->reset();
 		int done=0;
 		int counters[12]={};
-		int sizes[12] = {2048, 1024, 512, 256, 128, 64, 32, 16, 8, 4, 2, 1};
+		//int sizes[12] = {2048, 1024, 512, 256, 128, 64, 32, 16, 8, 4, 2, 1};
+		int sizes[12] = {1,2,4,8,16,32,64,128,256,512,1024,2048};
 
 		int offset=0;
 		float ent=0;
@@ -195,7 +193,9 @@ int FileHandler::estimateStripeSize()
 				if (entropies[i].size() < CHECKS)
 					done--;
 			}
-			std::string wr = "Threads working";
+			std::string wr = "Thread ";
+			wr += std::to_string(id);
+			wr += " working ";
 			printf("\r%s\t",wr.c_str());
 			fflush(stdout);
 			if (done == 12)
@@ -212,6 +212,7 @@ int FileHandler::estimateStripeSize()
 		const float edge = 6.5f;
 		for (unsigned int i = 0; i < 12; ++i)
 		{
+			adressEdges.clear();
 			for (unsigned int j = 0; j < entropies[i].size();)
 			{
 				if (entropies[i].at(j).second > edge)
@@ -226,18 +227,47 @@ int FileHandler::estimateStripeSize()
 						}
 						if (j >= entropies[i].size())
 							break;
-					} while (entropies[i].at(j).first-sizes[i] == entropies[i].at(j-1).first);
+					} while (entropies[i].at(j).first == entropies[i].at(j-1).first+sizes[i]);
+					if (j < entropies[i].size() && j >= 2 && entropies[i].at(j-2).second > edge && entropies[i].at(j).first != entropies[i].at(j-1).first+sizes[i])
+						adressEdges.push_back(entropies[i].at(j-1).first+sizes[i]);		
 				} else {
 					do
 					{
 						++j;
 						if (j >= entropies[i].size())
 							break;
-					} while (entropies[i].at(j).first-sizes[i] == entropies[i].at(j-1).first);
+					} while (entropies[i].at(j).first == entropies[i].at(j-1).first+sizes[i]);
 				}
 			}
+
 			for (auto in : adressEdges)
 			{
+					/*
+				if (in % 2048 == 0)
+					counters[0] += 1;
+				else if (in % 1024 == 0)
+					counters[1] += 1;
+				else if (in % 512 == 0)
+					counters[2] += 1;
+				else if (in % 256 == 0)
+					counters[3] += 1;
+				else if (in % 128 == 0)
+					counters[4] += 1;
+				else if (in % 64 == 0)
+					counters[5] += 1;
+				else if (in % 32 == 0)
+					counters[6] += 1;
+				else if (in % 16 == 0)
+					counters[7] += 1;
+				else if (in % 8 == 0)
+					counters[8] += 1;
+				else if (in % 4 == 0)
+					counters[9] += 1;
+				else if (in % 2 == 0)
+					counters[10] += 1;
+				else if (in % 1 == 0)
+					counters[11] += 1;
+					*/
 				if (in % 2048 == 0)
 					counters[0] += 1;
 				if (in % 1024 == 0)
@@ -277,9 +307,10 @@ int FileHandler::estimateStripeSize()
 	unsigned int NUM_THREADS = inFiles.size();
 	std::vector<std::future<std::vector<int>>> futureResults(inFiles.size());
 	std::vector<std::vector<int>> results;
+	std::cout << "Threads starting" << std::endl;
 	for (size_t i = 0; i < NUM_THREADS; ++i)
 	{
-		futureResults[i] = std::async(std::launch::async, lambda, inFiles.at(i));
+		futureResults[i] = std::async(std::launch::async, lambda, i);
 	}
 	std::future_status status;
 	while (results.size() < inFiles.size())
@@ -317,7 +348,7 @@ int FileHandler::estimateStripeSize()
 	int index = 0;
 	for (unsigned int i = 1; i < 12; ++i)
 	{
-		if (counters[i-1] == 0 || counters[i] == 0)
+		if (counters[i-1]==0 || counters[i]==0)
 			continue;
 		float tmp = (float)counters[i-1]/(float)counters[i]; 
 		if (tmp < min)
@@ -358,7 +389,7 @@ int FileHandler::estimateStripeSize()
 		return false;
 	}
 	std::cout << "It's probably:\t" << stripeSize << std::endl;
-	char answer;
+	char answer='y';
 	std::cout << "Estimated Stripesize: " << stripeSize << "KB" << std::endl;
 	std::cout << "It's just with simple heuristic. Would you like to continue with this result?" << std::endl;
 	std::cout << "Answer with 'y' for 'yes', 'n' for 'no' or 'h' for 'hint' [y/n/h] ";
@@ -447,10 +478,11 @@ int FileHandler::estimateStripeSize()
 
 std::vector<size_t> FileHandler::estimateStripeMap(bool isRaid5)
 {
-	auto lambda = [&] (FileReader *me) -> std::vector<std::pair<size_t, float>>
+	auto lambda = [&] (size_t id) -> std::vector<std::pair<size_t, float>>
 	{
-		const int CHECKS = 64*1024*1024;
+		const int CHECKS = 256*1024*1024;
 		std::vector<std::pair<size_t, float>> entropies;
+		FileReader *me = inFiles.at(id);
 		me->reset();
 
 		int offset=0;
@@ -475,7 +507,9 @@ std::vector<size_t> FileHandler::estimateStripeMap(bool isRaid5)
 				if (entropies.size() >= CHECKS)
 					break;
 			}
-			std::string wr = "Threads working\t";
+			std::string wr = "Thread ";
+			wr += std::to_string(id);
+			wr += " working ";
 			printf("\r%s\t",wr.c_str());
 			fflush(stdout);
 			if (me->asyncReload()==false)
@@ -484,7 +518,6 @@ std::vector<size_t> FileHandler::estimateStripeMap(bool isRaid5)
 			}
 			++reloads;
 		} while (entropies.size() < CHECKS);
-		me->reset();
 		return entropies;
 	};
 	//lambda function end
@@ -496,7 +529,7 @@ std::vector<size_t> FileHandler::estimateStripeMap(bool isRaid5)
 	std::vector<std::vector<std::pair<size_t,float>>> results;
 	for (size_t i = 0; i < NUM_THREADS; ++i)
 	{
-		futureResults[i] = std::async(std::launch::async, lambda, inFiles.at(i));
+		futureResults[i] = std::async(std::launch::async, lambda, i);
 	}
 	std::future_status status;
 	while (results.size() < inFiles.size())
@@ -515,12 +548,7 @@ std::vector<size_t> FileHandler::estimateStripeMap(bool isRaid5)
 				}
 				if (status == std::future_status::ready)
 				{
-					std::vector<std::pair<size_t, float>> ent = futureResults.at(i).get();
-					if (ent.empty())
-					{
-						std::cout << "Empty at " << i << std::endl;
-					}
-					results.push_back(ent);
+					results.push_back(futureResults.at(i).get());
 				}
 			}
 		}
@@ -803,16 +831,51 @@ std::vector<size_t> FileHandler::estimateStripeMap(bool isRaid5)
 					{
 						for (unsigned int k = 0; k < missing.size(); ++k)
 						{
-							if (missing.at(k) == (int)j)
+							if (missing.at(k) == (int)j && used == false)
 							{
 								used=true;
 								mappe.at(i).at(j) = -2;
 								missing.erase(missing.begin()+k);
 							}
 						}
-						if (used==true)
-							break;
+					} 
+				}
+			}
+			std::vector<int> inUse;
+			for (unsigned int i = 0; i < mappe.size();++i)
+			{
+				missing.clear();
+				inUse.clear();
+				missing.resize(mappe.size(),0);
+				inUse.resize(mappe.size(),-1);
+				size_t missingC = 0;
+				for (unsigned int j = 0; j < mappe.at(i).size(); ++j)
+				{
+					if (mappe.at(i).at(j) == -1)
+						missingC++;
+					else
+					{
+						missing.at(j) = 1;
+						if (mappe.at(i).at(j) != -2)
+							inUse.at(mappe.at(i).at(j)) = 1;
+						else 
+							inUse.at(mappe.size()-1) = 1;
 					}
+				}
+				if (missingC == 1)
+				{
+					int entry=0;
+					int value=-1;
+					for (unsigned int j = 0; j < mappe.at(i).size(); ++j)
+					{
+						if (missing.at(j) == 0)
+							entry = j;
+						if (inUse.at(j) == -1)
+						{
+							value = j;
+						}
+					}
+					mappe.at(i).at(entry) = value;
 				}
 			}
 		}
@@ -842,6 +905,41 @@ std::vector<size_t> FileHandler::estimateStripeMap(bool isRaid5)
 		}
 	} else
 	{
+		std::vector<int> missing;
+		std::vector<int> inUse;
+		for (unsigned int i = 0; i < mappe.size();++i)
+		{
+			missing.clear();
+			inUse.clear();
+			missing.resize(mappe.size(),0);
+			inUse.resize(mappe.size(),-1);
+			size_t missingC = 0;
+			for (unsigned int j = 0; j < mappe.at(i).size(); ++j)
+			{
+				if (mappe.at(i).at(j) == -1)
+					missingC++;
+				else
+				{
+					missing.at(j) = 1;
+					inUse.at(mappe.at(i).at(j)) = 1;
+				}
+			}
+			if (missingC == 1)
+			{
+				int entry=0;
+				int value=-1;
+				for (unsigned int j = 0; j < mappe.at(i).size(); ++j)
+				{
+					if (missing.at(j) == 0)
+						entry = j;
+					if (inUse.at(j) == -1)
+					{
+						value = j;
+					}
+				}
+				mappe.at(i).at(entry) = value;
+			}
+		}
 		std::cout << "Found this map: " << std::endl;
 		int next = 0;
 		while (next < (int)results.size())
@@ -857,27 +955,27 @@ std::vector<size_t> FileHandler::estimateStripeMap(bool isRaid5)
 		}
 		std::cout << std::endl;
 	}
-	
-   char answer;
-   std::cout << "Are you happy with the estimated Stripemap? [y/n] ";
-   std::cin >> answer;
-   if (answer == 'y')
-   {
-	   std::cout << "Continuing with restoring the image." << std::endl;
-   }
-   else
-   {
-	   std::cout << "Please enter the Stripemap as an array beginning with the top row, starting with 1 as numeration. 0 is a parity block. Example: " << std::endl;
-	   std::cout << "1 \n 2 \n 0 \n 0 \n 3 \n 4 ..." << std::endl;
-	   for (unsigned int i = 0; i < mappe.size();++i)
-	   {
-		   for (unsigned int j = 0; j < mappe.at(i).size(); ++j)
-		   {
-			   std::cin >> mappe[i][j];
-		   }
-	   }
-   }
-	 
+
+	char answer='y';
+	std::cout << "Are you happy with the estimated Stripemap? [y/n] ";
+	std::cin >> answer;
+	if (answer == 'y')
+	{
+		std::cout << "Continuing with restoring the image." << std::endl;
+	}
+	else
+	{
+		std::cout << "Please enter the Stripemap as an array beginning with the top row, starting with 1 as numeration. 0 is a parity block. Example: " << std::endl;
+		std::cout << "1 \n 2 \n 0 \n 0 \n 3 \n 4 ..." << std::endl;
+		for (unsigned int i = 0; i < mappe.size();++i)
+		{
+			for (unsigned int j = 0; j < mappe.at(i).size(); ++j)
+			{
+				std::cin >> mappe[i][j];
+			}
+		}
+	}
+
 	/*
 	 * DEBUG OUTPUT -  DO NOT ERASE ME
 	 *
@@ -940,11 +1038,6 @@ std::vector<size_t> FileHandler::estimateStripeMap(bool isRaid5)
 	 lastAdress = currentLowest + inFiles.at(0)->getBlockSize();
 	 }
 	 */
-
-	for (size_t i = 0; i < inFiles.size(); ++i)
-	{
-		inFiles.at(i)->setBlockSize(inFiles.at(i)->getBlockSize());
-	}
 	return stripeMap;
 }
 

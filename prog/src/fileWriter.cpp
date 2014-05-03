@@ -46,7 +46,7 @@ bool FileWriter::writeToFile(char *buf, size_t size)
 		++pos;
 		++counter;
 	}
-	//fs.write(buf, size);
+		//fs.write(buf, size);
 	return true;
 }
 
@@ -104,17 +104,17 @@ bool FileWriter::closeFile()
 	return true;
 }
 
-void FileWriter::setPath(std::string p)
+void FileWriter::setPath(std::string path)
 {
 	if (fs.is_open())
 	{
+		writeAsync();
 		localMtx.lock();
 		fs.close();
 		localMtx.unlock();
 	}
-	outPath = p;
+	outPath = path;
 	init = true;
-	pos = 0;
 }
 
 std::string FileWriter::getPath()

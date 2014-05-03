@@ -5,6 +5,8 @@
 #include <fstream>
 #include <vector>
 #include <cmath>
+#include <stdio.h>
+#include <stdlib.h>
 #include <mutex>
 #include <thread>
 #include <future>
@@ -15,18 +17,18 @@
 class FileReader
 {
 private:
-	std::ifstream fs;
+	FILE *fs;
 	char *loadBuffer;
 	char *workBuffer;
 	char *block;
 
-	size_t allSize;
-	std::filebuf *pbuf;
 	volatile bool localLoad;
+	bool greater;
 	std::future<bool> threadSync;
 	std::mutex localMtx;
+	std::filebuf *pbuf;
+	size_t allSize;
 
-	int readSize;
 	size_t globalAdress;
 	size_t endOfLoadBuf;
 	size_t endOfWorkBuf;
@@ -40,8 +42,9 @@ public:
 	FileReader();
 	FileReader(std::string inPath, size_t size);
 
+	size_t getRestBuffer();
 	size_t getBufferLength() {return std::min(bufferLength,endOfWorkBuf);}
-	size_t getBlockSize() {return readSize;}
+	size_t getBlockSize() {return blockSize;}
 
 	char *getBuffer();
 	size_t getBufferSize();

@@ -29,6 +29,7 @@ public:
 	FileHandler();
 	FileHandler(std::string inputFolder, std::string outputFolder);
 
+	void setBlockSize(size_t blocksize);
 	void addImage(std::string path);
 	bool findGoodBlock();
 	int estimateStripeSize();
@@ -36,7 +37,6 @@ public:
 	void reset();
 	int findStringInBlock(std::string seek);
 	bool reloadBuffers();
-	void setBlockSize(size_t block);
 	int findString(std::string seek);
 	
 	std::vector<FileReader*> getInFiles();

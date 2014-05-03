@@ -430,7 +430,7 @@ bool RaidSystem::raidCheck(std::string path)
 			std::cout << "FAILED!\n Now the intensive check to estimate the raid version begins." << std::endl;
 		} else 
 		{
-			char answer;
+			char answer='y';
 			std::cout << "Do you want to accept this? [y/n] ";
 			std::cin >> answer;
 			if (answer == 'n')
