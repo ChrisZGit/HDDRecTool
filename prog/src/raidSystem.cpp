@@ -2,7 +2,8 @@
 
 RaidSystem::RaidSystem()
 {
-	std::cerr << "Wrong Constructor for RaidSystem." << std::endl;
+	std::cerr << "Wrong Constructor for Raid system." << std::endl;
+	exit(EXIT_FAILURE);
 }
 
 RaidSystem::RaidSystem(FileHandler *fileHandler)
@@ -81,13 +82,13 @@ bool RaidSystem::easyCheck()
 	std::vector<FileReader *> inFiles = handle->getInFiles();
 	if(inFiles.size() < 2)
 	{
-		std::cout << "\tThere are too few devices given for an easy Raid1-check." << std::endl;
+		std::cout << "\tThere are too few devices for a Raid system." << std::endl;
 		return false;
 	}
 	if (handle->findGoodBlock() == false)
 	{
-		std::cerr << "\tNo valid readable block found! Image too broken!" << std::endl;
-		//return false;
+		std::cerr << "\tNo valid readable block found! Disc too broken!" << std::endl;
+		return false;
 	}
 
 	for (int j = 0; j < CHECKSIZE; ++j)
@@ -95,8 +96,8 @@ bool RaidSystem::easyCheck()
 		buf1[j] = 0;
 	}
 
-	std::cout << "\tMake some tests to check if a valid Raid-version can be estimated." << std::endl;
-	for (int count=0; count < 40000; ++count)
+	std::cout << "\tTesting 150k blocks to check if a valid Raid-version can be estimated." << std::endl;
+	for (int count=0; count < 30000; ++count)
 	{
 		for (int i = 0; i < 5; ++i)
 		{
@@ -142,23 +143,23 @@ bool RaidSystem::easyCheck()
 		}
 		if (handle->findGoodBlock() == false)
 		{
-			std::cout << "\tCouldnt test enough blocks. heuristic guess takes place." << std::endl;
+			std::cout << "\tCouldnt find enough testable blocks. Trying to estimate with heuristics." << std::endl;
 			break;
 		}
 	}
-	std::cout << "\tHits for Raid1: " << raid1 << std::endl;
-	std::cout << "\tHits for Raid5: " << raid5 << std::endl;
-	std::cout << "\tMisses: " << misses << std::endl;
+	std::cout << "\tHits for Raid1\t: " << std::setw(6) << raid1 << "\t(mirrored blocks)"<< std::endl;
+	std::cout << "\tHits for Raid5\t: " << std::setw(6) << raid5 << "\t(blocks with corresponding parity block)"<< std::endl;
+	std::cout << "\tMisses\t\t: "       << std::setw(6) << misses << "\t(none of above)" << std::endl;
 	handle->reset();
 	if (raid1 > (misses+raid5)*1.5)
 	{
 		raidSystem = Raid1;
-		std::cout << "Found a raid version with the easy check: 1" << std::endl;
+		std::cout << "Found a Raid 1 system." << std::endl;
 		return true;
 	} else if (raid5 > (misses+raid1)*1.5 && inFiles.size() >= 3)
 	{
 		raidSystem = Raid5_complete;
-		std::cout << "Found a raid version with the easy check: 5 complete" << std::endl;
+		std::cout << "Found a complete Raid 5 system." << std::endl;
 		return true;
 	}
 	//see if you can find 2 same partitiontables at 2 of all hdds, if so, its raid5_incomplete
@@ -176,7 +177,7 @@ bool RaidSystem::easyCheck()
 		{
 			lostImages = 1;
 			raidSystem = Raid5_incomplete;
-			std::cout << "Found a raid version with the easy check: 5 incomplete" << std::endl;
+			std::cout << "Found mirrored partition table. Has to be an incomplete Raid 5 system." << std::endl;
 			handle->reset();
 			return true;
 		}
@@ -185,20 +186,20 @@ bool RaidSystem::easyCheck()
 	{
 		lostImages = 1;
 		raidSystem = Raid5_incomplete;
-		std::cout << "Found a raid version with the easy check: 5 incomplete" << std::endl;
+		std::cout << "Some mirrored blocks and some parity blocks found. It's probably an incomplete Raid 5 system." << std::endl;
 		handle->reset();
 		return true;
 	}
 	else if (raid1 > (100/(inFiles.size()+1))*misses)
 	{
 		raidSystem = Raid1;
-		std::cout << "Found a raid version with the easy check: 1" << std::endl;
+		std::cout << "Above average mirrored blocks found. Has to be a Raid 1 system." << std::endl;
 		return true;
 	}
 	else
 	{
 		raidSystem = Raid0;
-		std::cout << "Found a raid version with the easy check: 0" << std::endl;
+		std::cout << "Too few mirrored blocks or parity infos found. Has to be a Raid 0 system." << std::endl;
 		return true;
 	}
 	return false;
@@ -218,12 +219,10 @@ bool RaidSystem::buildDataImage(std::string path)
 	std::vector<FileReader *> inFiles = handle->getInFiles();
 	FileWriter *writeMe = handle->getFileWriter();
 	writeMe->setPath(path);
-	handle->reset();
 	
 	for (unsigned int j = 0; j < inFiles.size(); ++j)
 	{
 		inFiles.at(j)->reset();
-		inFiles.at(j)->setBlockSize(stripeSize);
 	}
 	if (raidSystem == Raid5_user || raidSystem == Raid5_incomplete || raidSystem == Raid5_complete)
 	{
@@ -232,6 +231,7 @@ bool RaidSystem::buildDataImage(std::string path)
 		char *buffer = new char[bufferSize];
 		int *blocks = new int[inFiles.size()]{};
 		char *parity = new char[stripeSize]{};
+		size_t localStripe=stripeSize;
 
 		unsigned int pointer=0;
 		double written = 0.0f;
@@ -268,13 +268,13 @@ bool RaidSystem::buildDataImage(std::string path)
 					if (blocks[i] == order && order > 0)
 					{
 						char *tmp = inFiles.at(i)->getBuffer();
-						stripeSize = inFiles.at(i)->getBlockSize();
-						for (int j = 0; j < stripeSize; ++j)
+						localStripe = inFiles.at(i)->getBlockSize();
+						for (unsigned int j = 0; j < localStripe; ++j)
 						{
 							buffer[j+skip] = tmp[j];
-							parity[j] = parity[j]^buffer[j];
+							parity[j] = parity[j]^buffer[j+skip];
 						}
-						skip += stripeSize;
+						skip += localStripe;
 						if (inFiles.at(i)->newBlock() == false)
 						{
 							if (inFiles.at(i)->asyncReload()== false )
@@ -293,15 +293,14 @@ bool RaidSystem::buildDataImage(std::string path)
 				}
 			} while ((unsigned int)order < inFiles.size());
 			written += skip/1024.0f/1024.0f;
-			printf("\r%f MB finished", written);
+			printf("\r%f MB written", written);
 			writeMe->writeToFile(buffer, skip);
 			pointer = (pointer + inFiles.size()-1)%((stripeMap.size()));
-				if (finished == inFiles.size())
-				{
-				//	writeMe->writeToFile(buffer, skip);
-					writeMe->closeFile();
-					return true;
-				}
+			if (finished == inFiles.size())
+			{
+				writeMe->closeFile();
+				return true;
+			}
 		}
 		return true;
 	} else if (raidSystem == Raid1)
@@ -309,24 +308,25 @@ bool RaidSystem::buildDataImage(std::string path)
 		return false;
 	} else if (raidSystem == Raid0)
 	{
+		size_t localStripe=stripeSize;
 		const size_t bufferSize=(inFiles.size())*stripeSize;
 		char *buffer = new char[bufferSize];
 
 		double written = 0.0f;
 		while (true)
 		{
-			stripeSize = inFiles.at(0)->getBlockSize();
+			localStripe = inFiles.at(0)->getBlockSize();
 			for (unsigned int i = 0; i < stripeMap.size(); ++i)
 			{
 				char *tmp = inFiles.at(stripeMap.at(i))->getBuffer();
-				for (int j = 0; j < stripeSize; ++j)
+				for (unsigned int j = 0; j < localStripe; ++j)
 				{
-					buffer[j+(i)*stripeSize] = tmp[j];
+					buffer[j+(i)*localStripe] = tmp[j];
 				}
 			}
-			written += stripeSize/1024.0f/1024.0f;
-			printf("\r%f MB finished", written);
-			writeMe->writeToFile(buffer, stripeSize*inFiles.size());
+			written += inFiles.size()*localStripe/1024.0f/1024.0f;
+			printf("\r%f MB written", written);
+			writeMe->writeToFile(buffer, localStripe*inFiles.size());
 			for (unsigned int i = 0; i < inFiles.size(); ++i)
 			{
 				if (inFiles.at(i)->newBlock() == false)
@@ -349,11 +349,11 @@ bool RaidSystem::recoverLostImage()
 {
 	if (lostImages == 0)
 	{
-		std::cout << "\tNo lost Images to recover" << std::endl;
+		std::cout << "\tNo lost disc to recover." << std::endl;
 		return true;
 	} else if (lostImages > 1)
 	{
-		std::cerr << "\tToo many lost Images to recover" << std::endl;
+		std::cerr << "\tToo many lost discs to recover." << std::endl;
 		return false;
 	}
 	std::vector<FileReader *> inFiles = handle->getInFiles();
@@ -369,8 +369,6 @@ bool RaidSystem::recoverLostImage()
 		double written = 0.0f;
 		size_t runs=0;
 		char *buf = new char[blocklength];
-		for (unsigned int j = 0; j < inFiles.size(); ++j)
-			inFiles.at(j)->reset();
 		while (true)
 		{
 			blocklength = inFiles.at(0)->getBlockSize();
@@ -390,7 +388,7 @@ bool RaidSystem::recoverLostImage()
 			}
 			handle->getFileWriter()->writeToFile(buf,blocklength);
 			written += blocklength/1024.0f/1024.0f;
-			printf("\r%f MB finished", written);
+			printf("\r%f MB written", written);
 			fflush(stdout);
 			for (unsigned int j = 0; j < inFiles.size(); ++j)
 			{
@@ -418,6 +416,45 @@ bool RaidSystem::recoverLostImage()
 	return false;
 }
 
+void RaidSystem::printAllInfos()
+{
+	std::cout << std::endl;
+	std::cout << "All information compact: " << std::endl << std::endl;
+	std::vector<FileReader *> inFiles = handle->getInFiles();
+	std::cout << "Found Raid system: ";
+	if (raidSystem == Raid_unknown)
+	{
+		std::cout << "No valid found";
+	} else if (raidSystem == Raid0)
+	{
+		std::cout << "Raid 0";
+	} else if (raidSystem == Raid1)
+	{
+		std::cout << "Raid 1";
+	} else if (raidSystem == Raid5_incomplete)
+	{
+		std::cout << "Raid 5 - with one disc missing";
+	} else if (raidSystem == Raid5_complete)
+	{
+		std::cout << "Raid 5";
+	}
+	std::cout << std::endl;
+	std::cout << "Stripe/Chunk-size:\t" << stripeSize/1024 << "KB" << std::endl;
+	std::cout << "Device order:" << std::endl;
+	size_t size = inFiles.size();
+	int parityPlate = size-1;
+	if (raidSystem == Raid5_incomplete || raidSystem == Raid5_complete)
+		size -= 1;
+	for (unsigned int i = 0; i < size; ++i)
+	{
+		parityPlate += i;
+		std::cout << i+1 << ") " << inFiles.at(stripeMap.at(i))->getPath() << std::endl;
+		parityPlate -= stripeMap.at(i);
+	}
+	if (raidSystem == Raid5_incomplete || raidSystem == Raid5_complete)
+		std::cout << size+1 << ") " << inFiles.at(parityPlate)->getPath() << std::endl;
+}
+
 bool RaidSystem::raidCheck(std::string path)
 {
 	bool found = false;
@@ -427,7 +464,8 @@ bool RaidSystem::raidCheck(std::string path)
 		found = easyCheck();
 		if (found == false)
 		{
-			std::cout << "FAILED!\n Now the intensive check to estimate the raid version begins." << std::endl;
+			std::cout << "No valid Raid system found!" << std::endl;
+			return false;
 		} else 
 		{
 			char answer='y';
@@ -435,32 +473,31 @@ bool RaidSystem::raidCheck(std::string path)
 			std::cin >> answer;
 			if (answer == 'n')
 			{
-				std::cout << "Raid Version can not be estimated automatically. Must be handed over with the program start." << std::endl;
+				std::cout << "Raid system can not be estimated automatically. Must be handed with the program start." << std::endl;
 				return false;
 			}
-//			std::cout << "Found a raid version with the easy check: " << raidSystem  << std::endl;
 		}
 	} else if (raidSystem == Raid5_user)
 	{
 		if (lostImages == -1)
 		{
-			std::cout << "User input: Raid5! Checking for lost Images or if it's raid1" << std::endl;
+			std::cout << "User input: Raid 5! Checking for lost discs or if it's a Raid 1 system." << std::endl;
 			found = easyCheck();
 			if (found == false)
 			{
 				if (raidSystem == Raid1)
 				{
-					std::cerr << "User input wrong. Estimated raid1!" << std::endl;
+					std::cerr << "User input wrong. Estimated Raid 1 system!" << std::endl;
 					return false;
 				} else
 				{
-					std::cout << "Images missing. Will recover image later!" << std::endl;
+					std::cout << "Discs missing. Will recover disc later!" << std::endl;
 					raidSystem = Raid5_incomplete;
 				}
 				found = true;
 			} else
 			{
-				std::cout << "Raid 5 is complete. No missing images indicated!" << std::endl;
+				std::cout << "Raid 5 system is complete. No missing discs indicated!" << std::endl;
 			}
 		} else if (lostImages == 0)
 		{
@@ -478,7 +515,7 @@ bool RaidSystem::raidCheck(std::string path)
 	{
 		if (lostImages > 0)
 		{
-			std::cerr << "User specifies Raid0 with lost images. Cannot be recovered!" << std::endl;
+			std::cerr << "User specifies Raid 0 system with lost discs. Cannot be recovered!" << std::endl;
 			return false;
 		}
 		found = true;
@@ -487,12 +524,12 @@ bool RaidSystem::raidCheck(std::string path)
 	//raidType almost done
 	if (found == false)
 	{
-		std::cerr << "No valid Raidsystem found! Have to abort!" << std::endl;
+		std::cerr << "No valid Raid system found! Have to abort!" << std::endl;
 		return false;
 	}
 	if (raidSystem == Raid5_incomplete)
 	{
-		std::cout << "Incomplete Raid5-System. Will recover image and mount it internally." << std::endl;
+		std::cout << "Incomplete Raid 5 system. Will recover disc and mount it internally." << std::endl;
 		recoverLostImage();
 		handle->addImage(handle->getFileWriter()->getPath());
 	}
@@ -500,25 +537,24 @@ bool RaidSystem::raidCheck(std::string path)
 	//estimate the stripesize
 	if (stripeSize == -1)
 	{
-		std::cout << "No stripesize specified! Trying to calculate Stripesize now." << std::endl;
+		std::cout << "No Stripesize specified! Trying to calculate Stripesize now." << std::endl;
 		found = calculateStripeSize();
-		found=true;
 	} else
 	{
-		std::cout << "Using stripesize specified by user!" << std::endl;
+		std::cout << "Using Stripesize specified by user!" << std::endl;
 		found = true;
 	}
 	if (found == true)
 	{
-		std::cout << "Stripesize: " << stripeSize << std::endl;
+		std::cout << "Stripesize: " << stripeSize/1024 << "KB" << std::endl;
 	} else
 	{
-		std::cerr << "No valid Stripesize found. User should estimate it on its own, or Image could not be recovered." << std::endl;
+		std::cerr << "No valid Stripesize found. User should estimate it on its own, or disc could not be recovered." << std::endl;
 		return false;
 	}
 	handle->setBlockSize(stripeSize);
 
-	std::cout << "Trying to estimate the stripemap." << std::endl;
+	std::cout << "Trying to estimate the Stripemap." << std::endl;
 	if (raidSystem == Raid5_user || raidSystem == Raid5_incomplete || raidSystem == Raid5_complete)
 	{
 		stripeMap = handle->estimateStripeMap(true);
@@ -527,21 +563,26 @@ bool RaidSystem::raidCheck(std::string path)
 		stripeMap = handle->estimateStripeMap(false);
 	} else
 	{
-		std::cout << "No need to estimate map" << std::endl;
+		std::cout << "No need to estimate Stripemap because of Raid 1 system." << std::endl;
 		found = true;
 	}
 
-	if (stripeMap.size() == 0)
+	if (stripeMap.size() == 0 && !(raidSystem == Raid1))
 	{
-		std::cerr << "No valid Stripemap found. Has to abort Recovery." << std::endl;
+		std::cerr << "No valid Stripemap found. Have to abort Recovery." << std::endl;
 		return false;
-	}
-	else
+	} else if (raidSystem == Raid1)
 	{
-		std::cout << "Beginning to build the imagefile from the raid-devices." << std::endl;
+	} else
+	{
+		std::cout << "Rebuild the imagefile out of the Raid discs." << std::endl;
 		found = buildDataImage(path);
 	}
 
+	if (found == true)
+	{
+		printAllInfos();
+	}
 	return found;
 }
 

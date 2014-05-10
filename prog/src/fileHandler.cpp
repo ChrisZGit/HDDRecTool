@@ -9,11 +9,33 @@ FileHandler::FileHandler(std::string inputFolder, std::string outputFolder)
 	loadAvail = true;
 	inFolder = inputFolder;
 	outFolder = outputFolder;
-	DIR *dpdf;
-	struct dirent *epdf;
-
 	std::vector<std::string> imgs;
 
+#ifdef WINDOWS
+	HANDLE dir;
+	WIN32_FIND_DATA file_data;
+
+	if ((dir = FindFirstFile((directory + "/*").c_str(), &file_data)) == INVALID_HANDLE_VALUE)
+	{
+		std::cerr << "Couldn't find any files in directory " << inputFolder << std::endl;
+		exit(EXIT_FAILURE); 
+	}
+	do {
+		const string file_name = file_data.cFileName;
+		const string full_file_name = directory + "/" + file_name;
+		const bool is_directory = (file_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
+
+		if (file_name[0] == '.')
+			continue;
+		if (is_directory)
+			continue;
+		imgs.push_back(full_file_name);
+	} while (FindNextFile(dir, &file_data));
+
+	FindClose(dir);
+#else
+	DIR *dpdf;
+	struct dirent *epdf;
 	dpdf = opendir(inputFolder.c_str());
 	if (dpdf != NULL)
 	{
@@ -21,15 +43,18 @@ FileHandler::FileHandler(std::string inputFolder, std::string outputFolder)
 		{
 			if (epdf->d_name[0] == '.')
 				continue;
-			std::string tmp = inputFolder+epdf->d_name;
-			std::cout << tmp << std::endl;
-			
-			imgs.push_back(tmp);
+			if (epdf->d_type == DT_REG)
+			{
+				std::string tmp = inputFolder+epdf->d_name;
+				std::cout << tmp << std::endl;
+				imgs.push_back(tmp);
+			}
 		}
 	}
+#endif
 	if (imgs.empty())
 	{
-		std::cerr << "No valid directory or no valid datas in directory" << std::endl;
+		std::cerr << "No valid directory or no valid datas in directory." << std::endl;
 		exit(EXIT_FAILURE);
 	}
 	maxSize = (BUFLENGTH/(imgs.size()+1))/2*2;
@@ -74,7 +99,7 @@ bool FileHandler::findGoodBlock()
 	int erg = -1;
 	int sample=-1;
 	bool found=false;
-	
+
 	static bool init=true;
 	if (init == false)
 	{
@@ -86,7 +111,7 @@ bool FileHandler::findGoodBlock()
 				{
 					if (inFiles.at(j)->asyncReload() == false)
 					{
-						std::cout << "Couldnt find any good Blocks anymore. File end reached." << std::endl;
+						std::cout << "Couldnt find any good blocks anymore. End-of-File reached." << std::endl;
 						return false;
 					}	
 				}
@@ -104,7 +129,7 @@ bool FileHandler::findGoodBlock()
 		{
 			if (inFiles.at(0)->asyncReload() == false)
 			{
-				std::cout << "Couldn't load any good Blocks anymore. Good luck!" << std::endl;
+				std::cout << "Couldn't load any good blocks anymore." << std::endl;
 				return false;
 			}
 			++newBlocks;
@@ -131,7 +156,7 @@ bool FileHandler::findGoodBlock()
 			{
 				if (inFiles.at(i)->asyncReload() == false)
 				{
-					std::cout << "Couldnt find any good Blocks anymore. File end reached." << std::endl;
+					std::cout << "Couldn't find any good blocks anymore. End-of-File reached." << std::endl;
 					return false;
 				}
 			}
@@ -174,23 +199,23 @@ int FileHandler::estimateStripeSize()
 		do
 		{
 			done = 12;
-			for (int i = 0; i < 12; ++i)
+			for (unsigned int i = 0; i < 12; ++i)
 			{
 				me->setBlockSize(sizes[i]*1024);
 				me->setOffset(0);
 				while ((offset=me->findFirstNonemptyBlock())!=-1)
 				{
-					if (entropies[i].size() >= CHECKS)
+					if (entropies[i].size() >= CHECKS/(i+1))
 						break;
 					me->setOffset(offset);
 					ent = me->calcEntropyOfCurrentBlock();
 					std::pair<size_t, float> input((offset+reloads*me->getBufferLength())/1024, ent);
 					me->setOffset(me->getBlockSize()+offset);
 					entropies[i].push_back(input);
-					if (entropies[i].size() >= CHECKS)
+					if (entropies[i].size() >= CHECKS/(i+1))
 						break;
 				}
-				if (entropies[i].size() < CHECKS)
+				if (entropies[i].size() < CHECKS/(i+1))
 					done--;
 			}
 			std::string wr = "Thread ";
@@ -307,7 +332,7 @@ int FileHandler::estimateStripeSize()
 	unsigned int NUM_THREADS = inFiles.size();
 	std::vector<std::future<std::vector<int>>> futureResults(inFiles.size());
 	std::vector<std::vector<int>> results;
-	std::cout << "Threads starting" << std::endl;
+	std::cout << "Issuing Stripesize-calculating threads." << std::endl;
 	for (size_t i = 0; i < NUM_THREADS; ++i)
 	{
 		futureResults[i] = std::async(std::launch::async, lambda, i);
@@ -359,7 +384,7 @@ int FileHandler::estimateStripeSize()
 	}
 	stripeSize = value[index];
 	int x = 0;
-	std::cout << "Found:\n";
+	std::cout << "Found possible blocksizes with following ratios (Higher value means supposable blocksize):\n";
 	std::cout << "2048:\t" << counters[x] << std::endl;
 	++x;
 	std::cout << "1024:\t" << counters[x] << "\t" << (float)counters[x]/(float)counters[x-1] << std::endl;
@@ -385,13 +410,12 @@ int FileHandler::estimateStripeSize()
 	std::cout << "   1:\t" << counters[x] << "\t" << (float)counters[x]/(float)counters[x-1] <<  std::endl;
 	if (stripeSize == 2048)
 	{
-		std::cout << "Not one good block found. Need to abort" << std::endl;
+		std::cout << "Not one good block found. Need to abort." << std::endl;
 		return false;
 	}
-	std::cout << "It's probably:\t" << stripeSize << std::endl;
 	char answer='y';
-	std::cout << "Estimated Stripesize: " << stripeSize << "KB" << std::endl;
-	std::cout << "It's just with simple heuristic. Would you like to continue with this result?" << std::endl;
+	std::cout << "It's probably:\t" << stripeSize << "KB"<< std::endl;
+	std::cout << "It's just with simple heuristics. Would you like to continue with this result?" << std::endl;
 	std::cout << "Answer with 'y' for 'yes', 'n' for 'no' or 'h' for 'hint' [y/n/h] ";
 	std::cin >> answer;
 	if (answer == 'y')
@@ -400,13 +424,15 @@ int FileHandler::estimateStripeSize()
 	}
 	else if (answer == 'n')
 	{
-		std::cout << "With which stripesize do you wish to continue? [1-1024] (in kB) ";
+		std::cout << "With which Stripesize do you wish to continue? [1-1024] (in kB) ";
 		std::cin >> stripeSize;
 		stripeSize *= 1024;
 	}
 	else
 	{
-		std::cerr << "Try a bigger BlockSize in 'include/defines.h'. Maybe, the heuristic works better than. Otherwise you have to estimate it on your own." << std::endl;
+		std::cerr << "Heuristic is pretty simple. Stripesize could be all blocksizes with a ratio higher than 1.0! " << std::endl;
+		std::cerr << "If automatically estimated Stripesize doesn't work. You could try the blocksize with the next lower ratio!" << std::endl;
+		return -1;
 	}
 	for (size_t i = 0; i < inFiles.size(); ++i)
 	{
@@ -414,6 +440,8 @@ int FileHandler::estimateStripeSize()
 	}
 
 	/*
+	 * DEBUG OUTPUT - do not kill me
+	 *
 	   for (unsigned int i = 0; i < results.size(); ++i)
 	   {
 	   pointer[i] = 0;
@@ -480,7 +508,7 @@ std::vector<size_t> FileHandler::estimateStripeMap(bool isRaid5)
 {
 	auto lambda = [&] (size_t id) -> std::vector<std::pair<size_t, float>>
 	{
-		const int CHECKS = 256*1024*1024;
+		const int CHECKS = 64*1024;
 		std::vector<std::pair<size_t, float>> entropies;
 		FileReader *me = inFiles.at(id);
 		me->reset();
@@ -881,6 +909,7 @@ std::vector<size_t> FileHandler::estimateStripeMap(bool isRaid5)
 		}
 
 		std::cout << "Found this map: " << std::endl;
+		int row=0;
 		for (unsigned int i = 0; i < mappe.size();++i)
 		{
 			int next = 0;
@@ -894,13 +923,14 @@ std::vector<size_t> FileHandler::estimateStripeMap(bool isRaid5)
 					} else
 					{
 						if (next == 0)
-							std::cout << mappe.at(i).at(j) << "\t";
+							std::cout << mappe.at(i).at(j)+row*(results.size()-1) << "\t";
 						if (next == mappe.at(i).at(j))
 							stripeMap.push_back(j);
 					}
 				}
 				next++;
 			}
+			row++;
 			std::cout << std::endl;
 		}
 	} else
@@ -965,13 +995,20 @@ std::vector<size_t> FileHandler::estimateStripeMap(bool isRaid5)
 	}
 	else
 	{
-		std::cout << "Please enter the Stripemap as an array beginning with the top row, starting with 1 as numeration. 0 is a parity block. Example: " << std::endl;
-		std::cout << "1 \n 2 \n 0 \n 0 \n 3 \n 4 ..." << std::endl;
+		std::cout << "Please enter the Stripemap. Enumerate the discs starting with 0. Row-wise enter the parity disc at first. Example: " << std::endl;
+		std::cout << " 1 \n 2 \n 0 \n 0 \n 2 \n 1 ... for 3 discs results in:\n 1 P 0 \n P 3 2" << std::endl;
+		stripeMap.clear();
 		for (unsigned int i = 0; i < mappe.size();++i)
 		{
 			for (unsigned int j = 0; j < mappe.at(i).size(); ++j)
 			{
-				std::cin >> mappe[i][j];
+				int input;
+				std::cin >> input;
+				if (j != 0)
+				{
+					mappe[i][j] = input;
+					stripeMap.push_back(input);
+				}
 			}
 		}
 	}
@@ -1049,26 +1086,6 @@ void FileHandler::reset()
 	}
 }
 
-int FileHandler::findStringInBlock(std::string seek)
-{
-	for (unsigned int i = 0; i < inFiles.size(); ++i)
-	{
-		int adr = inFiles.at(i)->findFirstNonemptyBlock();
-		if (adr==-1)
-		{
-		} else
-		{
-			inFiles.at(i)->setOffset(adr);
-			adr = inFiles.at(i)->findString(seek);
-		}
-		if (adr > 0)
-		{
-			return adr;
-		}
-	}
-	return -1;
-}
-
 bool FileHandler::reloadBuffers()
 {
 	//std::cout << "reload Buffers" << std::endl;
@@ -1079,39 +1096,6 @@ bool FileHandler::reloadBuffers()
 			return false;
 	}
 	return true;
-}
-
-int FileHandler::findString(std::string seek)
-{
-	reset();
-	int found = -1;
-	bool eof=true;
-	while (found == -1)
-	{
-		for (unsigned int i = 0; i < inFiles.size(); ++i)
-		{
-			found = inFiles.at(i)->findFirstNonemptyBlock();
-			if (found == -1)
-			{
-				eof=inFiles.at(i)->asyncReload();
-			} else
-			{
-				inFiles.at(i)->setOffset(found);
-				found = inFiles.at(i)->findString(seek);
-				if (found != -1)
-				{
-					break;
-				}
-				if (inFiles.at(i)->newBlock() == false)
-				{
-					eof=inFiles.at(i)->asyncReload();
-				}
-			}
-			if (eof==false)
-				return -1;
-		}
-	}	
-	return found;
 }
 
 std::vector<FileReader *> FileHandler::getInFiles()

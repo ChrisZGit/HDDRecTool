@@ -8,17 +8,19 @@ FileReader::FileReader(std::string inPath, size_t size)
 {
 	path=inPath;
 	bufferLength = size;
-	//fs.open(path.c_str(), std::fstream::in | std::fstream::ate);
+
 	fs = fopen(path.c_str(), "rb");
-	if (fs==NULL)
+	if (!(fs))
 	{
 		std::cerr << "ERROR FileReader::FileReader - Couldnt open file: " << path << std::endl;
+		exit(EXIT_FAILURE);
 	}
 	loadBuffer = new char[bufferLength];
 	workBuffer = new char[bufferLength];
 	localLoad = true;
 	endOfLoadBuf = 0;
 	blockSize = BLOCKSIZE;
+	readSize = blockSize;
 	reloadBuffer();
 	globalAdress = 0;
 	offset = 0;
@@ -44,14 +46,14 @@ float FileReader::calcEntropyOfCurrentBlock()
 {
 	float ret = 0.0f;
 	unsigned int possibleVals[256]={};
-	for (unsigned int i = 0; i < blockSize; ++i)
+	for (unsigned int i = 0; i < readSize; ++i)
 	{
 		possibleVals[(unsigned char)block[i]] += 1;
 	}
 	float tmp;
 	for (unsigned int i = 0; i < 256; ++i)
 	{
-		tmp = (float)possibleVals[i]/(float)blockSize;
+		tmp = (float)possibleVals[i]/(float)readSize;
 		if (tmp>0)
 			ret += -tmp * std::log2(tmp);
 	}
@@ -68,7 +70,7 @@ bool FileReader::emptyBlock()
 
 void FileReader::printBlock()
 {
-	for (unsigned int i = 0; i < blockSize; i = i+16)
+	for (unsigned int i = 0; i < readSize; i = i+16)
 	{
 		for (int j = 0; j < 16; ++j)
 		{
@@ -82,47 +84,6 @@ void FileReader::printBlock()
 	}
 }
 
-std::vector<std::string> FileReader::getAllStringsInBlock()
-{
-	std::vector<std::string> ret;
-	unsigned int i = 0;
-	while (i < blockSize)
-	{
-		std::string tmp((char *)(block+i));
-		int len = tmp.length();
-
-		if (len > 1)
-		{
-			size_t first=0,last=std::string::npos;
-			do
-			{
-				last = std::string::npos;
-				tmp = std::string(tmp,first,last);
-				first=0;
-				last = tmp.find(" ");
-				std::string sub(tmp,first,last);
-				ret.push_back(sub);
-				first=last+1;
-			} while (last != std::string::npos);
-		}
-		i += len+1;
-	}
-	return ret;
-}
-
-int FileReader::findString(std::string seek)
-{
-	std::string tmp;
-	tmp.assign((char *)block, blockSize);
-	size_t ret = tmp.find(seek);
-	if (ret == std::string::npos)
-	{
-		return -1;
-	}
-	std::cout << globalAdress + offset + ret << "\tat\t" << path << std::endl;
-	return (int (globalAdress+offset+ret));
-}
-
 void FileReader::setOffset(size_t off)
 {
 	offset=off;
@@ -131,9 +92,9 @@ void FileReader::setOffset(size_t off)
 
 int FileReader::findFirstNonemptyBlock(int add)
 {
-	for (size_t i = offset+add; i+blockSize < endOfWorkBuf; i += blockSize)
+	for (size_t i = offset+add; i+readSize < endOfWorkBuf; i += readSize)
 	{
-		for (size_t j = 0; j < blockSize; ++j)
+		for (size_t j = 0; j < readSize; ++j)
 		{
 			if (workBuffer[i+j] > 0)
 			{
@@ -146,7 +107,6 @@ int FileReader::findFirstNonemptyBlock(int add)
 
 bool FileReader::skipInputBuffer(int NumOfBuffers)
 {
-	std::cout << "Skipping buffer for " << path << std::endl;
 	for (int i = 0; i < NumOfBuffers; ++i)
 		asyncReload();
 	return true;
@@ -155,6 +115,7 @@ bool FileReader::skipInputBuffer(int NumOfBuffers)
 void FileReader::setBlockSize(size_t blockS)
 {
 	this->blockSize=blockS;
+	this->readSize = blockSize;
 }
 
 bool FileReader::asyncReload()
@@ -222,7 +183,7 @@ bool FileReader::asyncReload()
 	char *tmp = loadBuffer;
 	loadBuffer = workBuffer;
 	workBuffer = tmp;
-	block = workBuffer;
+	block = &workBuffer[0];
 	offset = 0;
 	endOfWorkBuf = endOfLoadBuf;
 	globalAdress += bufferLength;
@@ -249,39 +210,39 @@ bool FileReader::reloadBuffer()
 	}
 	loadAvail = false;
 	mtx.unlock();
-	//if (fs.is_open() && fs.good() && !(fs.eof()))
-	{
 	 	endOfLoadBuf = fread(loadBuffer, sizeof(char), bufferLength, fs);
-	//	endOfLoadBuf = fs.readsome((char *)loadBuffer, bufferLength);
-		//offset = 0;
-		//globalAdress += bufferLength;
-	} 
-	//if (fs.bad() || endOfLoadBuf==0 || fs.eof())
 	if (endOfLoadBuf == 0)
 	{
 		mtx.lock();
 		loadAvail=true;
 		mtx.unlock();
-		//	std::cerr << "End of File reached" << std::endl;
 		return false;
 	}
 	mtx.lock();
 	loadAvail=true;
 	mtx.unlock();
-	//block = loadBuffer;
 	return true;
 }
 
 bool FileReader::newBlock()
 {
-	offset += blockSize;
+	offset += readSize;
 	if (offset+blockSize > endOfWorkBuf)
 	{
-		offset -= blockSize;
-		return false;
+		readSize = endOfWorkBuf-offset;
+		if (readSize == 0)
+			return false;
+	} else
+	{
+		readSize = blockSize;
 	}
 	block = &workBuffer[offset];
 	return true;
+}
+
+size_t FileReader::getBlockSize()
+{
+	return readSize;
 }
 
 void FileReader::reset()

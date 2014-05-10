@@ -23,9 +23,10 @@ bool FileWriter::writeToFile(char *buf, size_t size)
 	if (init == true)
 	{
 		fs.open(outPath.c_str(), std::fstream::out);
-		if (fs == NULL)
+		if (!(fs))
 		{
 			std::cerr << "ERROR FileWriter::FileWriter - Couldnt open file: " << outPath << std::endl;
+			exit(EXIT_FAILURE);
 		}
 		init = false;
 	}
@@ -36,7 +37,7 @@ bool FileWriter::writeToFile(char *buf, size_t size)
 		{
 			if (writeAsync() == false)
 			{
-				std::cerr << "Something went terribly wrong" << std::endl;
+				std::cerr << "Something went terribly wrong! " << std::endl;
 				return false;
 			}
 			pos = 0;
@@ -52,7 +53,7 @@ bool FileWriter::writeToFile(char *buf, size_t size)
 
 bool FileWriter::writeAsync()
 {
-	auto lambda = [this] () -> void
+	auto lambda = [&] () -> void
 	{
 		write();
 		localMtx.unlock();
@@ -113,6 +114,7 @@ void FileWriter::setPath(std::string path)
 		fs.close();
 		localMtx.unlock();
 	}
+	pos = 0;
 	outPath = path;
 	init = true;
 }

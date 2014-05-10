@@ -48,7 +48,7 @@ int main(int argc, char *argv[])
 		else if (input.compare("-n") == 0)
 		{
 			lostImages = atoi(argv[i+1]);
-            std::cout << "Lost Images: " << lostImages << std::endl;
+            std::cout << "Lost discs: " << lostImages << std::endl;
 		}
 		else
 		{
@@ -93,7 +93,7 @@ int main(int argc, char *argv[])
 	}
 
 	//Call the Raid Recovery
-	std::cout << "Interpreted parameters. Now starting analysing the raid-system." << std::endl;
+	std::cout << "Interpreted parameters. Now starting to analyse the Raid system." << std::endl;
 	raidR.run();
 	
 	return  0;

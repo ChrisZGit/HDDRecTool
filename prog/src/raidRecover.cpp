@@ -34,8 +34,8 @@ void RaidRecover::run()
 	bool found = system->raidCheck(o);
 	std::cout << std::endl;
 	if (found==true)
-		std::cout << "Recovery successful: " << system->getRaid() << std::endl;
+		std::cout << "Recovery successful!" << std::endl;
 	else
-		std::cout << "Recovery was aborted." << std::endl;
+		std::cout << "Recovery was aborted!" << std::endl;
 }
 

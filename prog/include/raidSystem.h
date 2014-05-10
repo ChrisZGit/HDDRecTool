@@ -5,6 +5,7 @@
 #include <iostream>
 #include <cstdlib>
 #include <fstream>
+#include <iomanip>
 
 #include <fileHandler.h>
 #include <defines.h>
@@ -49,6 +50,7 @@ public:
 
 	bool recoverLostImage();
 	bool raidCheck(std::string path);
+	void printAllInfos();
 
 //	std::vector<Pattern> getPattern();
 //	bool recoverLostImage();

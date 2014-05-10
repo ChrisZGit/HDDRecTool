@@ -23,12 +23,11 @@ private:
 	char *block;
 
 	volatile bool localLoad;
-	bool greater;
 	std::future<bool> threadSync;
 	std::mutex localMtx;
 	std::filebuf *pbuf;
-	size_t allSize;
 
+	size_t readSize;
 	size_t globalAdress;
 	size_t endOfLoadBuf;
 	size_t endOfWorkBuf;
@@ -44,7 +43,7 @@ public:
 
 	size_t getRestBuffer();
 	size_t getBufferLength() {return std::min(bufferLength,endOfWorkBuf);}
-	size_t getBlockSize() {return blockSize;}
+	size_t getBlockSize();
 
 	char *getBuffer();
 	size_t getBufferSize();
@@ -54,6 +53,7 @@ public:
 
 //	bool endOfImage();
 	
+	std::string getPath(){return path;}
 	std::vector<std::string> getAllStringsInBlock();
 	int findString(std::string seek);
 	void setOffset(size_t in);

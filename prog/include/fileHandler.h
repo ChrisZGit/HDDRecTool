@@ -35,9 +35,7 @@ public:
 	int estimateStripeSize();
 	std::vector<size_t> estimateStripeMap(bool isRaid5);
 	void reset();
-	int findStringInBlock(std::string seek);
 	bool reloadBuffers();
-	int findString(std::string seek);
 	
 	std::vector<FileReader*> getInFiles();
 	FileReader *getFileReader(size_t num);
