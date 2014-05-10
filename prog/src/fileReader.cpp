@@ -9,7 +9,9 @@ FileReader::FileReader(std::string inPath, size_t size)
 	path=inPath;
 	bufferLength = size;
 
-	fs = fopen(path.c_str(), "rb");
+	//fs = fopen(path.c_str(), "rb");
+	fs.open(path.c_str(), std::ifstream::in | std::ifstream::binary);
+
 	if (!(fs))
 	{
 		std::cerr << "ERROR FileReader::FileReader - Couldnt open file: " << path << std::endl;
@@ -186,6 +188,7 @@ bool FileReader::asyncReload()
 	block = &workBuffer[0];
 	offset = 0;
 	endOfWorkBuf = endOfLoadBuf;
+	readSize = blockSize;
 	globalAdress += bufferLength;
 	mtx.unlock();
 	//std::cout << globalAdress << "\t" << endOfWorkBuf << std::endl;
@@ -210,7 +213,12 @@ bool FileReader::reloadBuffer()
 	}
 	loadAvail = false;
 	mtx.unlock();
-	 	endOfLoadBuf = fread(loadBuffer, sizeof(char), bufferLength, fs);
+	if (fs.is_open())
+	{
+		fs.read((char *)loadBuffer, bufferLength);
+		endOfLoadBuf = fs.gcount();
+	}
+	//endOfLoadBuf = fread(loadBuffer, sizeof(char), bufferLength, fs);
 	if (endOfLoadBuf == 0)
 	{
 		mtx.lock();
@@ -227,15 +235,9 @@ bool FileReader::reloadBuffer()
 bool FileReader::newBlock()
 {
 	offset += readSize;
-	if (offset+blockSize > endOfWorkBuf)
-	{
-		readSize = endOfWorkBuf-offset;
-		if (readSize == 0)
-			return false;
-	} else
-	{
-		readSize = blockSize;
-	}
+	readSize = std::min(blockSize,endOfWorkBuf-offset);
+	if (readSize == 0)
+		return false;
 	block = &workBuffer[offset];
 	return true;
 }
@@ -256,9 +258,9 @@ void FileReader::reset()
 	}
 	localLoad = false;
 	localMtx.unlock();
-	rewind(fs);
-	//if (fs.good())
-	//	fs.seekg(0,fs.beg);
+	//rewind(fs);
+	fs.clear();
+	fs.seekg(0,fs.beg);
 	reloadBuffer();
 	globalAdress = 0;
 	localMtx.lock();

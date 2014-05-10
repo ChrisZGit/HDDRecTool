@@ -219,10 +219,12 @@ bool RaidSystem::buildDataImage(std::string path)
 	std::vector<FileReader *> inFiles = handle->getInFiles();
 	FileWriter *writeMe = handle->getFileWriter();
 	writeMe->setPath(path);
-	
+	handle->reset();
+
 	for (unsigned int j = 0; j < inFiles.size(); ++j)
 	{
 		inFiles.at(j)->reset();
+		inFiles.at(j)->setBlockSize(stripeSize);
 	}
 	if (raidSystem == Raid5_user || raidSystem == Raid5_incomplete || raidSystem == Raid5_complete)
 	{
@@ -234,7 +236,7 @@ bool RaidSystem::buildDataImage(std::string path)
 		size_t localStripe=stripeSize;
 
 		unsigned int pointer=0;
-		double written = 0.0f;
+		size_t written = 0;
 		while (true)
 		{
 			int order = 1;
@@ -287,13 +289,17 @@ bool RaidSystem::buildDataImage(std::string path)
 				}
 				if (finished == inFiles.size())
 				{
+					written += skip;
+					printf("\r%zu B written", written);
+					fflush(stdout);
 					writeMe->writeToFile(buffer, skip);
 					writeMe->closeFile();
 					return true;
 				}
 			} while ((unsigned int)order < inFiles.size());
-			written += skip/1024.0f/1024.0f;
-			printf("\r%f MB written", written);
+			written += skip;
+			printf("\r%zu B written", written);
+			fflush(stdout);
 			writeMe->writeToFile(buffer, skip);
 			pointer = (pointer + inFiles.size()-1)%((stripeMap.size()));
 			if (finished == inFiles.size())
@@ -359,12 +365,11 @@ bool RaidSystem::recoverLostImage()
 	std::vector<FileReader *> inFiles = handle->getInFiles();
 	for (unsigned int j = 0; j < inFiles.size(); ++j)
 	{
-		inFiles.at(j)->reset();
 		inFiles.at(j)->setBlockSize(128*1024);
+		inFiles.at(j)->reset();
 	}
 	if (raidSystem == Raid5_incomplete)
 	{
-		//size_t bufferlength = inFiles.at(0)->getBufferLength();
 		size_t blocklength = inFiles.at(0)->getBlockSize();
 		double written = 0.0f;
 		size_t runs=0;

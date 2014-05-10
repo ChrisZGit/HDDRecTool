@@ -17,7 +17,8 @@
 class FileReader
 {
 private:
-	FILE *fs;
+	//FILE *fs;
+	std::ifstream fs;
 	char *loadBuffer;
 	char *workBuffer;
 	char *block;

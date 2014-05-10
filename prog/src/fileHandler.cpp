@@ -508,7 +508,7 @@ std::vector<size_t> FileHandler::estimateStripeMap(bool isRaid5)
 {
 	auto lambda = [&] (size_t id) -> std::vector<std::pair<size_t, float>>
 	{
-		const int CHECKS = 64*1024;
+		const int CHECKS = 64*1024*1024;
 		std::vector<std::pair<size_t, float>> entropies;
 		FileReader *me = inFiles.at(id);
 		me->reset();

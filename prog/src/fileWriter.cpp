@@ -101,19 +101,19 @@ bool FileWriter::closeFile()
 		localMtx.lock();
 		fs.close();
 		localMtx.unlock();
+		std::string sys = "md5sum ";
+		sys += outPath;
+		std::cout << std::endl;
+		std::cout << "Hash5 for " << outPath << ":" << std::endl;
+		system(sys.c_str());
+		std::cout << std::endl;
 	}
 	return true;
 }
 
 void FileWriter::setPath(std::string path)
 {
-	if (fs.is_open())
-	{
-		writeAsync();
-		localMtx.lock();
-		fs.close();
-		localMtx.unlock();
-	}
+	closeFile();	
 	pos = 0;
 	outPath = path;
 	init = true;
@@ -123,4 +123,5 @@ std::string FileWriter::getPath()
 {
 	return outPath;
 }
+
 
