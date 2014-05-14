@@ -17,6 +17,14 @@ FileReader::FileReader(std::string inPath, size_t size)
 		std::cerr << "ERROR FileReader::FileReader - Couldnt open file: " << path << std::endl;
 		exit(EXIT_FAILURE);
 	}
+
+	std::string sys = "md5sum ";
+	sys += inPath;
+	std::cout << std::endl;
+	std::cout << "Hash5 for " << inPath << ":" << std::endl;
+	system(sys.c_str());
+	std::cout << std::endl;
+
 	loadBuffer = new char[bufferLength];
 	workBuffer = new char[bufferLength];
 	localLoad = true;
@@ -269,3 +277,16 @@ void FileReader::reset()
 	asyncReload();
 }
 
+void FileReader::closeFile()
+{
+	if (fs.is_open())
+	{
+		fs.close();
+		std::string sys = "md5sum ";
+		sys += path;
+		std::cout << std::endl;
+		std::cout << "Hash5 for " << path << ":" << std::endl;
+		system(sys.c_str());
+		std::cout << std::endl;
+	}
+}

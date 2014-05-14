@@ -65,5 +65,6 @@ public:
 	bool reloadBuffer();
 	bool newBlock();
 	void reset();
+	void closeFile();
 };
 #endif

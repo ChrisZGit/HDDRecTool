@@ -458,6 +458,11 @@ void RaidSystem::printAllInfos()
 	}
 	if (raidSystem == Raid5_incomplete || raidSystem == Raid5_complete)
 		std::cout << size+1 << ") " << inFiles.at(parityPlate)->getPath() << std::endl;
+
+	for (unsigned int j = 0; j < inFiles.size(); ++j)
+	{
+		inFiles.at(j)->closeFile();
+	}
 }
 
 bool RaidSystem::raidCheck(std::string path)
