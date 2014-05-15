@@ -64,6 +64,12 @@ void DBHandler::runThumbCacheViewer()
 #endif
 }
 
+bool DBHandler::handlerFinished()
+{
+	hashHandler.waitForFinish();
+	return true;
+}
+
 bool DBHandler::fillInfoVector()
 {
 	dbInfo pushMe;
@@ -86,7 +92,13 @@ bool DBHandler::fillInfoVector()
 		pushMe.headerChecksum = tmp.substr(2);
 		dbVec.push_back(pushMe);
 		if (pushMe.dataSize > 0)
+		{
 			ret = true;
+			std::string fileN = outputPath;
+			fileN += "/0x";
+			fileN += pushMe.hash;
+			hashHandler.insert(fileN, dbVec.back().md5Sum);
+		}
 	}
 	return ret;
 }

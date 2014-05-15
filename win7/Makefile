@@ -14,6 +14,7 @@ OBJPATH=./obj/
 
 objects= \
 		 $(OBJPATH)edbHandler.o\
+		 $(OBJPATH)hashSumHandler.o\
 		 $(OBJPATH)dbHandler.o\
 		 $(OBJPATH)dataHandler.o\
 		$(OBJPATH)fileReader.o\

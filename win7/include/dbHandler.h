@@ -8,6 +8,8 @@
 #include <iostream>
 #include <fstream>
 
+#include <hashSumHandler.h>
+
 class DBHandler
 {
 	private:
@@ -17,6 +19,8 @@ class DBHandler
 		std::vector<dbInfo> dbVec;
 		std::string currentLine;
 		std::ifstream fs;
+
+		HashSumHandler hashHandler;
 
 		void runThumbCacheViewer();
 		bool fillInfoVector();
@@ -28,6 +32,7 @@ class DBHandler
 		DBHandler(std::string fileName, std::string out);
 
 		bool startHandler();
+		bool handlerFinished();
 };
 
 #endif

@@ -53,7 +53,9 @@ void DataHandler::startHandlers()
 			dbVec.erase(dbVec.begin()+i);
 			continue;
 		}
+		dbVec.at(i)->handlerFinished();
 		++i;
 	}
+	std::cout << std::endl;
 }
 

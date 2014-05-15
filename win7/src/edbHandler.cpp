@@ -88,7 +88,6 @@ bool EDBHandler::fillInfoVector()
 
 		edbVec.push_back(pushMe);
 	}
-	std::cout << edbVec.size() << std::endl;
 	return true;
 }
 
