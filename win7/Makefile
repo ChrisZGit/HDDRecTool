@@ -12,11 +12,11 @@ MAIN=$(SRCPATH)main.cpp
 BINPATH=./bin/
 OBJPATH=./obj/
 
-objects=#$(OBJPATH)raidSystem.o\
-		$(OBJPATH)fileHandler.o\
+objects= \
+		 $(OBJPATH)edbHandler.o\
+		 $(OBJPATH)dataHandler.o\
 		$(OBJPATH)fileReader.o\
 		$(OBJPATH)fileWriter.o\
-		$(OBJPATH)raidRecover.o\
 
 
 all: exe
@@ -27,20 +27,8 @@ pathmaker:
 exe: pathmaker $(objects) $(MAIN)
 	$(CC) $(OPT) $(INC) $(LIBS) -o $(BINPATH)runme $(objects) $(MAIN)
 
-#$(OBJPATH)raidSystem.o: $(INCPATH)defines.h $(INCPATH)raidSystem.h $(SRCPATH)raidSystem.cpp
-#	$(CC) $(OPT) $(INC) $(LIBS) -c -o $(OBJPATH)raidSystem.o $(SRCPATH)raidSystem.cpp
-
-#$(OBJPATH)fileReader.o: $(INCPATH)defines.h $(INCPATH)fileReader.h $(SRCPATH)fileReader.cpp
-#	$(CC) $(OPT) $(INC) $(LIBS) -c -o $(OBJPATH)fileReader.o $(SRCPATH)fileReader.cpp
-
-#$(OBJPATH)fileHandler.o: $(INCPATH)defines.h $(INCPATH)fileHandler.h $(SRCPATH)fileHandler.cpp
-#	$(CC) $(OPT) $(INC) $(LIBS) -c -o $(OBJPATH)fileHandler.o $(SRCPATH)fileHandler.cpp
-
-#$(OBJPATH)fileWriter.o: $(INCPATH)defines.h $(INCPATH)fileWriter.h $(SRCPATH)fileWriter.cpp
-#	$(CC) $(OPT) $(INC) $(LIBS) -c -o $(OBJPATH)fileWriter.o $(SRCPATH)fileWriter.cpp
-
-#$(OBJPATH)raidRecover.o: $(INCPATH)defines.h $(INCPATH)raidRecover.h $(SRCPATH)raidRecover.cpp
-#	$(CC) $(OPT) $(INC) $(LIBS) -c -o $(OBJPATH)raidRecover.o $(SRCPATH)raidRecover.cpp
+$(OBJPATH)%.o: $(SRCPATH)%.cpp $(INCPATH)%.h
+	$(CC) $(OPT) $(INC) $(LIBS) -c $< -o $@
 
 clean:
 	rm -rf $(OBJPATH) $(BINPATH)
