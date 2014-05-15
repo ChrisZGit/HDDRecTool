@@ -18,13 +18,6 @@ FileReader::FileReader(std::string inPath, size_t size)
 		exit(EXIT_FAILURE);
 	}
 
-	std::string sys = "md5sum ";
-	sys += inPath;
-	std::cout << std::endl;
-	std::cout << "Hash5 for " << inPath << ":" << std::endl;
-	system(sys.c_str());
-	std::cout << std::endl;
-
 	loadBuffer = new char[bufferLength];
 	workBuffer = new char[bufferLength];
 	localLoad = true;
@@ -279,14 +272,25 @@ void FileReader::reset()
 
 void FileReader::closeFile()
 {
+	localMtx.lock();
+	while (localLoad == false)
+	{
+		localMtx.unlock();
+		usleep(1000*5);
+		localMtx.lock();
+	}
 	if (fs.is_open())
 	{
 		fs.close();
+#ifndef WINDOWS
 		std::string sys = "md5sum ";
 		sys += path;
 		std::cout << std::endl;
 		std::cout << "Hash5 for " << path << ":" << std::endl;
-		system(sys.c_str());
+		if (system(sys.c_str()))
+		{}
 		std::cout << std::endl;
+#endif
 	}
+	localMtx.unlock();
 }

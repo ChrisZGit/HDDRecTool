@@ -257,6 +257,12 @@ bool RaidSystem::buildDataImage(std::string path)
 					//use blocks in correct order
 					if (blocks[i] == order && order == 0)
 					{
+						char *tmp = inFiles.at(i)->getBuffer();
+						localStripe = inFiles.at(i)->getBlockSize();
+						for (unsigned int j = 0; j < localStripe; ++j)
+						{
+							parity[j] = parity[j]^tmp[j];
+						}
 						if (inFiles.at(i)->newBlock() == false)
 						{
 							if (inFiles.at(i)->asyncReload()== false )
@@ -302,6 +308,13 @@ bool RaidSystem::buildDataImage(std::string path)
 			fflush(stdout);
 			writeMe->writeToFile(buffer, skip);
 			pointer = (pointer + inFiles.size()-1)%((stripeMap.size()));
+			for (int i = 0; i < stripeSize; ++i)
+			{
+				if (parity[i] != 0)
+				{
+					std::cerr << "Parity Error at: " << written-skip+i << std::endl;
+				}
+			}
 			if (finished == inFiles.size())
 			{
 				writeMe->closeFile();

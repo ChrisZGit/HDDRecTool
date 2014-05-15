@@ -101,12 +101,15 @@ bool FileWriter::closeFile()
 		localMtx.lock();
 		fs.close();
 		localMtx.unlock();
+#ifndef WINDOWS
 		std::string sys = "md5sum ";
 		sys += outPath;
 		std::cout << std::endl;
 		std::cout << "Hash5 for " << outPath << ":" << std::endl;
-		system(sys.c_str());
+		if (system(sys.c_str()))
+		{}
 		std::cout << std::endl;
+#endif
 	}
 	return true;
 }

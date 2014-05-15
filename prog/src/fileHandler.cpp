@@ -64,6 +64,16 @@ FileHandler::FileHandler(std::string inputFolder, std::string outputFolder)
 	std::cout << "Image-Buffers:\t" << maxSize/1024/1024 << "MB" << std::endl;
 	for (unsigned int i = 0; i < imgs.size(); ++i)
 	{
+#ifndef WINDOWS
+		std::string sys = "md5sum ";
+		sys += imgs.at(i);
+		std::cout << std::endl;
+		std::cout << "Hash5 for " << imgs.at(i) << ":" << std::endl;
+		if (system(sys.c_str()))
+		{}
+		std::cout << std::endl;
+#endif
+
 		FileReader *a = new FileReader(imgs.at(i),maxSize);
 		inFiles.push_back(a);
 	}
@@ -384,7 +394,7 @@ int FileHandler::estimateStripeSize()
 	}
 	stripeSize = value[index];
 	int x = 0;
-	std::cout << "Found possible blocksizes with following ratios (Higher value means supposable blocksize):\n";
+	std::cout << "\nFound possible blocksizes with following ratios (Higher value means supposable blocksize):\n";
 	std::cout << "2048:\t" << counters[x] << std::endl;
 	++x;
 	std::cout << "1024:\t" << counters[x] << "\t" << (float)counters[x]/(float)counters[x-1] << std::endl;
