@@ -32,6 +32,16 @@ typedef struct edbInfo
 	pictureInfo picInfo;
 } edbInfo;
 
+typedef struct dbInfo
+{
+	size_t offset;
+	size_t dataSize;
+	std::string hash;
+	std::string dataChecksum;
+	std::string headerChecksum;
+	std::string md5Sum;
+} dbInfo;
+
 std::string const TABLENAME="SystemIndex_0A";
 
 #endif

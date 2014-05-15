@@ -3,13 +3,44 @@
 volatile bool loadAvail;
 std::mutex mtx;
 
-DataHandler::DataHandler()
+DataHandler::DataHandler(std::string in, std::string out)
 {
-	EDBHandler bla("./databases/","vol2-C..ProgramData.Microsoft.Search.Data.Applications.Windows.Windows.edb");
-	bla.startHandler();
-	edbInfo t;
-	bool ret;
-	ret = bla.getHash("8dc67ebcfe5e4459", t);
-	if (ret == true)
-		std::cout << t.sysInfo.fileName << std::endl;
+	inPath = in;
+	outPath = out;
 }
+
+void DataHandler::startHandlers()
+{
+	DIR *dpdf;
+	struct dirent *epdf;
+	dpdf = opendir(inPath.c_str());
+	if (dpdf != NULL)
+	{ 
+		while ((epdf=readdir(dpdf))!=NULL)
+		{
+			if (epdf->d_name[0] == '.') 
+				continue;
+			if (epdf->d_type == DT_REG)
+			{
+				//standard db-file
+				std::string tmp = epdf->d_name;
+				if (tmp.find(".db")!=std::string::npos)
+				{
+					tmp = inPath + tmp;
+					DBHandler *a = new DBHandler(tmp, outPath);
+					dbVec.push_back(a);
+				}
+				else if (tmp.find(".edb")!=std::string::npos)
+				{
+					edbHandler = new EDBHandler(inPath, tmp);
+				}
+			}
+		}
+	} 
+	if (dbVec.size()==0 || !(edbHandler))
+	{
+		std::cout << "No valid files found" << std::endl;
+		return;
+	}
+}
+

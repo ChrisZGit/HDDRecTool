@@ -14,6 +14,7 @@ OBJPATH=./obj/
 
 objects= \
 		 $(OBJPATH)edbHandler.o\
+		 $(OBJPATH)dbHandler.o\
 		 $(OBJPATH)dataHandler.o\
 		$(OBJPATH)fileReader.o\
 		$(OBJPATH)fileWriter.o\
@@ -31,4 +32,4 @@ $(OBJPATH)%.o: $(SRCPATH)%.cpp $(INCPATH)%.h
 	$(CC) $(OPT) $(INC) $(LIBS) -c $< -o $@
 
 clean:
-	rm -rf $(OBJPATH) $(BINPATH)
+	rm -rf $(OBJPATH) $(BINPATH)/runme
