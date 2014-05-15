@@ -6,16 +6,15 @@ DBHandler::DBHandler(std::string fileN, std::string out)
 	size_t pos = fileName.find_last_of("/");
 	size_t end = fileName.length()-3;
 	std::string sub = fileName.substr(pos, end-pos);
-	std::cout << fileName << std::endl;
 	outputPath = out;
+	outputPath += sub;
+	outputPath += "/";
 	std::string sys = "rm -rf ";
 	sys += outputPath;
-	sys += sub;
 	if (system(sys.c_str()))
 	{}
 	sys = "mkdir ";
 	sys += outputPath;
-	sys += sub;
 	if (system(sys.c_str()))
 	{}
 }
@@ -30,12 +29,22 @@ bool DBHandler::startHandler()
 
 	if (!(fs))
 	{
-		std::cerr << "Couldn't open db-file!" << std::endl;
-		std::cerr << dbFile << std::endl;
+		//no file found, as there was none built
+		std::string sys = "rm -rf ";
+		sys += outputPath;
+		if (system(sys.c_str()))
+		{}
 		return false;
 	}
 	bool ret = fillInfoVector();
 	fs.close();
+	if (ret == false)
+	{
+		std::string sys = "rm -rf ";
+		sys += outputPath;
+		if (system(sys.c_str()))
+		{}
+	}
 	return ret;
 }
 
@@ -47,6 +56,8 @@ void DBHandler::runThumbCacheViewer()
 	sys += fileName;
 	sys += " ";
 	sys += outputPath;
+	sys += " > /dev/null";
+	std::cout << outputPath << std::endl;
 	if (system(sys.c_str()))
 	{}
 	std::cout << std::endl;
@@ -56,6 +67,7 @@ void DBHandler::runThumbCacheViewer()
 bool DBHandler::fillInfoVector()
 {
 	dbInfo pushMe;
+	bool ret = false;
 	for (int i = 0; i < 9; ++i)
 		getNextLine();
 	while (getNextLine() == true)
@@ -73,10 +85,10 @@ bool DBHandler::fillInfoVector()
 		tmp = getInfoAtPos(6);
 		pushMe.headerChecksum = tmp.substr(2);
 		dbVec.push_back(pushMe);
-		std::cout << pushMe.hash << std::endl;
+		if (pushMe.dataSize > 0)
+			ret = true;
 	}
-	std::cout << dbVec.size() << std::endl;
-	return true;
+	return ret;
 }
 
 std::string DBHandler::getInfoAtPos(size_t pos)

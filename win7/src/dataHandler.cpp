@@ -42,5 +42,18 @@ void DataHandler::startHandlers()
 		std::cout << "No valid files found" << std::endl;
 		return;
 	}
+	if (edbHandler->startHandler() == false)
+	{
+		return;
+	}
+	for (unsigned int i = 0; i < dbVec.size();)
+	{
+		if (dbVec.at(i)->startHandler()==false)
+		{
+			dbVec.erase(dbVec.begin()+i);
+			continue;
+		}
+		++i;
+	}
 }
 
