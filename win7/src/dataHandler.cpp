@@ -8,7 +8,7 @@ DataHandler::DataHandler(std::string in, std::string out)
 	inPath = in;
 	outPath = out;
 
-	ImageCarver a(in,out);
+	ImageCarver a(in, "./datas/");
 	a.carveImg();
 }
 

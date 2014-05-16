@@ -24,7 +24,7 @@ class ImageCarver
 
 		void mmls();
 		void fls(size_t offset, UserDatas &);
-		void icat(size_t offset, size_t inode, std::string name, Database &);
+		void icat(size_t offset, std::string inode, std::string name);
 		
 	public:
 		ImageCarver(std::string, std::string);

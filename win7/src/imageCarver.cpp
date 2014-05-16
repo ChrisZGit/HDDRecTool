@@ -11,9 +11,45 @@ bool ImageCarver::carveImg()
 	mmls();
 	if (partition.size()==0)
 		return false;
+	std::string sys = "rm -rf ";
+	sys += outputPath;
+	if (system(sys.c_str()))
+	{}
+	sys = "mkdir ";
+	sys += outputPath;
+	if (system(sys.c_str()))
+	{}
+
 	for (size_t i = 0; i < partition.size(); ++i)
 	{
 		fls(partition.at(i).first, partition.at(i).second);
+	}
+	for (size_t i = 0; i < partition.size(); ++i)
+	{
+		for (size_t j = 0; j < partition.at(i).second.size(); ++j)
+		{
+			Database me = partition.at(i).second.at(j).second;
+			if (me.size() != 0)
+			{
+				std::string name = outputPath+partition.at(i).second.at(j).first;
+				sys = "rm -rf ";
+				sys += name;
+				if (system(sys.c_str()))
+				{}
+				sys = "mkdir ";
+				sys += name;
+				if (system(sys.c_str()))
+				{}
+				name += "/";
+				for (size_t k = 0; k < me.size(); ++k)
+				{
+					std::string file = name + me.at(k).second;
+					std::string inode = me.at(k).first;
+					size_t offset = partition.at(i).first;
+					icat(offset, inode, file);
+				}
+			}
+		}
 	}
 	while(true);
 	return true;
@@ -152,7 +188,6 @@ void ImageCarver::fls(size_t offset, UserDatas &userDatas)
 		if (inode == "")
 			continue;
 		//found directory to databases
-		Database useMe = userDatas.at(count).second;
 		newCall = "fls -o ";
 		newCall += std::to_string(offset);
 		newCall += " " + fileName + " ";
@@ -179,10 +214,22 @@ void ImageCarver::fls(size_t offset, UserDatas &userDatas)
 
 					std::pair<std::string, std::string> pushMe;
 					pushMe = std::make_pair(inode, name);
-					useMe.push_back(pushMe);
+					userDatas.at(count).second.push_back(pushMe);
 				}
 			}
 		}
 	}
 }
+
+void ImageCarver::icat(size_t offset, std::string inode, std::string name)
+{
+	std::string sys = "icat ";
+	sys += fileName;
+	sys += " -o " + std::to_string(offset);
+	sys += " " + inode;
+	sys += " > " + name; 
+	if (system(sys.c_str()))
+	{}
+}
+
 
