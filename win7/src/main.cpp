@@ -55,6 +55,7 @@ int main(int argc, char *argv[])
 		outPath += "/";
 
 	DataHandler newOne(inPath, outPath);
+	newOne.initHandlers();
 	newOne.startHandlers();
 	return  0;
 }

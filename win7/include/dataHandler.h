@@ -10,17 +10,25 @@
 #include <defines.h>
 #include <edbHandler.h>
 #include <dbHandler.h>
+
+typedef std::pair<std::string /*folderName*/, DBHandler *> SizeThumbs;
+typedef std::vector<std::pair<std::string/*username*/, std::vector<SizeThumbs>>> UserThumbs;
+typedef std::pair<EDBHandler *, UserThumbs> PartitionThumbs;
+typedef std::vector<std::pair<std::string/*offset in partition table*/, PartitionThumbs>> AllPartitions;
+
 class DataHandler
 {
 	private: 
 		std::string inPath;
 		std::string outPath;
-		std::vector<DBHandler *> dbVec;
-		EDBHandler *edbHandler;
+		ImageCarver *imgCarver;
+
+		AllPartitions thumbVec;
 
 	public:
 		DataHandler(std::string in, std::string out);
 		void startHandlers();
+		void initHandlers();
 };
 
 #endif

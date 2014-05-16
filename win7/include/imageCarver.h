@@ -25,8 +25,10 @@ class ImageCarver
 		void mmls();
 		void fls(size_t offset, UserDatas &);
 		void icat(size_t offset, std::string inode, std::string name);
+		std::string carveEDB(size_t offset);
 		
 	public:
+		~ImageCarver();
 		ImageCarver(std::string, std::string);
 
 		bool carveImg();

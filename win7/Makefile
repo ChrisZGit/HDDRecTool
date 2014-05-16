@@ -18,8 +18,6 @@ objects= \
 		 $(OBJPATH)hashSumHandler.o\
 		 $(OBJPATH)dbHandler.o\
 		 $(OBJPATH)dataHandler.o\
-		$(OBJPATH)fileReader.o\
-		$(OBJPATH)fileWriter.o\
 
 
 all: exe

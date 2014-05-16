@@ -1,5 +1,15 @@
 #include <imageCarver.h>
 
+ImageCarver::~ImageCarver()
+{
+	/*
+	std::string sys = "rm -rf ";
+	sys += outputPath;
+	if (system(sys.c_str()))
+	{}
+	*/
+}
+
 ImageCarver::ImageCarver(std::string in, std::string out)
 {
 	fileName = in.substr(0,in.length()-1);
@@ -24,14 +34,32 @@ bool ImageCarver::carveImg()
 	{
 		fls(partition.at(i).first, partition.at(i).second);
 	}
+	bool ret = false;
 	for (size_t i = 0; i < partition.size(); ++i)
 	{
+		std::string dirName = outputPath+std::to_string(partition.at(i).first);
+		sys = "rm -rf ";
+		sys += dirName;
+		if (system(sys.c_str()))
+		{}
+		std::string edbInode = carveEDB(partition.at(i).first);
+		if (edbInode == "")
+		{
+			continue;
+		}
+		ret = true;
+		sys = "mkdir ";
+		sys += dirName;
+		if (system(sys.c_str()))
+		{}
+		dirName += "/";
+		icat(partition.at(i).first, edbInode, dirName+"Windows.edb");
 		for (size_t j = 0; j < partition.at(i).second.size(); ++j)
 		{
 			Database me = partition.at(i).second.at(j).second;
 			if (me.size() != 0)
 			{
-				std::string name = outputPath+partition.at(i).second.at(j).first;
+				std::string name = dirName+partition.at(i).second.at(j).first;
 				sys = "rm -rf ";
 				sys += name;
 				if (system(sys.c_str()))
@@ -51,8 +79,7 @@ bool ImageCarver::carveImg()
 			}
 		}
 	}
-	while(true);
-	return true;
+	return ret;
 }
 
 void ImageCarver::mmls()
@@ -91,6 +118,72 @@ void ImageCarver::mmls()
 	pclose(pipe);
 }
 
+std::string ImageCarver::carveEDB(size_t offset)
+{
+	const char *findStrings[6] = {"ProgramData", "Microsoft", "Search", "Data", "Applications", "Windows"};
+	char buf[256];
+	
+	std::string sys = "fls -D ";
+	sys += fileName;
+	sys += " -o ";
+	sys += std::to_string(offset);
+	sys += " ";
+
+	std::string inode = "";
+	for (size_t i = 0; i < 6; ++i)
+	{
+		std::string call = sys + inode;
+		inode = "";
+		FILE *pipe = popen(call.c_str(), "r");
+	
+		if (!(pipe))
+			return "";
+		while (!(feof(pipe)))
+		{
+			if (fgets(buf, 256, pipe) != NULL)
+			{
+				std::string line = buf;
+				std::stringstream ss;
+				if (line.find(findStrings[i]) != std::string::npos)
+				{
+					ss << line;
+					ss >> line;
+					ss >> inode;
+					inode.pop_back();
+					break;
+				}
+			}
+		}
+		if (inode == "")
+			break;
+	}
+	if (inode == "")
+		return inode;
+
+	std::string call = "fls " + fileName + " -o " + std::to_string(offset) + " " + inode;
+	FILE *pipe = popen(call.c_str(), "r");
+	if (!(pipe))
+		return "";
+	inode = "";
+	while (!(feof(pipe)))
+	{
+		if (fgets(buf, 256, pipe) != NULL)
+		{
+			std::string line = buf;
+			std::stringstream ss;
+			if (line.find(".edb") != std::string::npos)
+			{
+				ss << line;
+				ss >> line;
+				ss >> inode;
+				inode.pop_back();
+				break;
+			}
+		}
+	}
+	return inode;
+}
+
 void ImageCarver::fls(size_t offset, UserDatas &userDatas)
 {
 	const char *findStrings[6] = {"Users", "AppData", "Local", "Microsoft", "Windows", "Explorer"};
@@ -102,7 +195,7 @@ void ImageCarver::fls(size_t offset, UserDatas &userDatas)
 	sys += " -o ";
 	sys += std::to_string(offset);
 	pipe = popen(sys.c_str(), "r");
-	
+
 	if (!(pipe))
 		return;
 	std::string inode;
@@ -128,7 +221,7 @@ void ImageCarver::fls(size_t offset, UserDatas &userDatas)
 		return;
 	std::string newCall = sys;
 	newCall += " " + inode;
-	
+
 	pipe = popen(newCall.c_str(), "r");
 	if (!(pipe))
 		return;

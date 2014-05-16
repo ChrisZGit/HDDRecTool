@@ -3,20 +3,16 @@
 DBHandler::DBHandler(std::string fileN, std::string out)
 {
 	fileName = fileN;
-	size_t pos = fileName.find_last_of("/");
-	size_t end = fileName.length()-3;
-	std::string sub = fileName.substr(pos, end-pos);
 	outputPath = out;
-	outputPath += sub;
+	std::string sys = "rm -f ";
+	sys += outputPath + "/*";
+	if (system(sys.c_str()))
+	{}
+	sys = "mkdir -p ";
+	sys += outputPath;
+	if (system(sys.c_str()))
+	{}
 	outputPath += "/";
-	std::string sys = "rm -rf ";
-	sys += outputPath;
-	if (system(sys.c_str()))
-	{}
-	sys = "mkdir ";
-	sys += outputPath;
-	if (system(sys.c_str()))
-	{}
 }
 
 bool DBHandler::startHandler()
@@ -30,21 +26,10 @@ bool DBHandler::startHandler()
 	if (!(fs))
 	{
 		//no file found, as there was none built
-		std::string sys = "rm -rf ";
-		sys += outputPath;
-		if (system(sys.c_str()))
-		{}
 		return false;
 	}
 	bool ret = fillInfoVector();
 	fs.close();
-	if (ret == false)
-	{
-		std::string sys = "rm -rf ";
-		sys += outputPath;
-		if (system(sys.c_str()))
-		{}
-	}
 	return ret;
 }
 
