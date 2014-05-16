@@ -90,14 +90,21 @@ bool DBHandler::fillInfoVector()
 		pushMe.dataChecksum = tmp.substr(2);
 		tmp = getInfoAtPos(6);
 		pushMe.headerChecksum = tmp.substr(2);
+		pushMe.md5Sum = "DEFAULT";
 		dbVec.push_back(pushMe);
 		if (pushMe.dataSize > 0)
 		{
 			ret = true;
+		}
+	}
+	for (size_t i = 0; i < dbVec.size(); ++i)
+	{
+		if (dbVec.at(i).dataSize>0)
+		{
 			std::string fileN = outputPath;
 			fileN += "/0x";
-			fileN += pushMe.hash;
-			hashHandler.insert(fileN, dbVec.back().md5Sum);
+			fileN += dbVec.at(i).hash;
+			hashHandler.insert(fileN, &dbVec.at(i));
 		}
 	}
 	return ret;
@@ -117,6 +124,7 @@ std::string DBHandler::getInfoAtPos(size_t pos)
 
 bool DBHandler::getNextLine()
 {
+	currentLine = "";
 	std::getline(fs,currentLine);
 	if (!(fs.eof()))
 		return true;

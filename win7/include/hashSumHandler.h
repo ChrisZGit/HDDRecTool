@@ -10,6 +10,8 @@
 #include <future>
 #include <queue>
 
+#include <defines.h>
+
 class HashSumHandler
 {
 	private:
@@ -17,13 +19,14 @@ class HashSumHandler
 		std::future<void> firstThread;
 		std::mutex mtx;
 		size_t workingThreads;
-		std::queue<std::pair<std::string, std::string &>> workList;
+		//std::queue<std::pair<std::string, dbInfo *>> workList;
+		std::queue<std::pair<std::string, dbInfo *>> workList;
 		
-		void finishQueue();
 
 	public:
 		HashSumHandler();
-		void insert(std::string, std::string &);
+		void insert(std::string, dbInfo *);
+		void finishQueue();
 		bool isEmpty();
 		void waitForFinish();
 };

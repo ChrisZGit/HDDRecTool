@@ -21,7 +21,11 @@ bool lockIfFreeThread()
 {
 	globalMtx.lock();
 	if (availableThreads > 0)
+	{
+		availableThreads--;
+		globalMtx.unlock();
 		return true;
+	}
 	globalMtx.unlock();
 	return false;
 }
@@ -41,30 +45,64 @@ HashSumHandler::HashSumHandler()
 
 void HashSumHandler::finishQueue()
 {
+	size_t maxThreads=10000;
+	std::vector<std::future<void>> dummy;
+	dummy.resize(maxThreads);
+	maxThreads=0;
+	auto lambda = [&] (std::pair<std::string, dbInfo *> entry, bool free)-> void
+	{
+		std::string sys = "md5sum ";
+		sys += entry.first;
+		FILE *pipe = popen(sys.c_str(), "r");
+
+		if (!pipe)
+			return;
+		std::string all;
+		char buf[33];
+		while (!feof(pipe))
+		{
+			if (fgets(buf, 33, pipe) != NULL)
+			{
+				entry.second->md5Sum = buf;
+				break;
+			}
+		}
+		pclose(pipe);
+		if (free == true)
+		{
+			freeThread();
+		}
+	};
+
+	std::pair<std::string, dbInfo *> workOnMe;
 	do 
 	{
 		mtx.lock();
-		auto me = workList.front();
-		workList.pop();
-		mtx.unlock();
-		
-		std::string sys = "md5sum ";
-		sys += me.first;
-		if (system(sys.c_str())){}
-		mtx.lock();
 		if (workList.empty())
 			break;
+		workOnMe = workList.front();
+		workList.pop();
 		mtx.unlock();
-		std::cout << workList.size() << std::endl;
+		if (lockIfFreeThread() == true && maxThreads < 10000)
+		{
+			dummy[maxThreads] = std::async(std::launch::async, lambda, workOnMe, true);
+			maxThreads = maxThreads+1;
+		} else
+		{
+			lambda(workOnMe,false);
+		}
 	} while (true);
+	for (size_t i = 0; i < maxThreads; ++i)
+		dummy.at(i).get();
 	workingThreads--;
 	mtx.unlock();
 	freeThread();
 }
 
-void HashSumHandler::insert(std::string file, std::string &hash)
+void HashSumHandler::insert(std::string file, dbInfo *inf)
 {
-	std::pair<std::string, std::string &> pushMe(file,hash);
+	std::pair<std::string, dbInfo *> pushMe;
+	pushMe = std::make_pair(file, inf);
 	mtx.lock();
 	workList.push(pushMe);
 	mtx.unlock();
@@ -72,10 +110,11 @@ void HashSumHandler::insert(std::string file, std::string &hash)
 	{
 		init = true;
 		waitForFreeThread();
+		auto fun = std::bind(&HashSumHandler::finishQueue, this);
+		firstThread = std::async(std::launch::async, fun);
 		mtx.lock();
 		workingThreads++;
 		mtx.unlock();
-		firstThread = std::async(std::launch::async, &HashSumHandler::finishQueue, this);
 	}
 }
 
@@ -88,7 +127,6 @@ void HashSumHandler::waitForFinish()
 		mtx.unlock();
 		usleep(1000*500);
 		mtx.lock();
-		std::cout << workingThreads << " " << workList.size() << std::endl;
 	}
 	mtx.unlock();
 }
