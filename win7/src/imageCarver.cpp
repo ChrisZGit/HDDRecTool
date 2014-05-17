@@ -226,6 +226,7 @@ void ImageCarver::fls(size_t offset, UserDatas &userDatas)
 	//Users found
 	if (inode.empty())
 		return;
+	std::cout << "Found some Users. Will take a closer look." << std::endl;
 	std::string newCall = sys;
 	newCall += " " + inode;
 
@@ -288,6 +289,7 @@ void ImageCarver::fls(size_t offset, UserDatas &userDatas)
 		if (inode == "")
 			continue;
 		//found directory to databases
+		std::cout << "Found a directory to relevant databases of User " << userDatas.at(count).first << std::endl;
 		newCall = "fls -o ";
 		newCall += std::to_string(offset);
 		newCall += " " + fileName + " ";
