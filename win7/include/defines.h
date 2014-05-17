@@ -6,6 +6,7 @@
 #define BLOCKSIZE (1024*64)
 
 #include <string>
+#include <vector>
 
 typedef struct systemInfo
 {
@@ -34,13 +35,20 @@ typedef struct edbInfo
 
 typedef struct dbInfo
 {
+	std::string absoluteFileName;
 	size_t offset;
 	size_t dataSize;
 	std::string hash;
 	std::string dataChecksum;
 	std::string headerChecksum;
 	std::string md5Sum;
+	bool foundInEDB;
 } dbInfo;
+
+typedef std::pair<edbInfo, dbInfo> FileInfo;
+typedef std::pair<std::string, std::vector<FileInfo>> ThumbCacheFiles;
+typedef std::pair<std::string, std::vector<ThumbCacheFiles>> UserFiles;
+typedef std::pair<std::string, std::vector<UserFiles>> PartitionFiles;
 
 std::string const TABLENAME="SystemIndex_0A";
 

@@ -2,12 +2,10 @@
 
 ImageCarver::~ImageCarver()
 {
-	/*
 	std::string sys = "rm -rf ";
 	sys += outputPath;
 	if (system(sys.c_str()))
 	{}
-	*/
 }
 
 ImageCarver::ImageCarver(std::string in, std::string out)
@@ -20,7 +18,11 @@ bool ImageCarver::carveImg()
 {
 	mmls();
 	if (partition.size()==0)
+	{
+		std::cout << "None found! Have to abort" << std::endl;
 		return false;
+	}
+	std::cout << "Found: " << partition.size() << " partitions" << std::endl;
 	std::string sys = "rm -rf ";
 	sys += outputPath;
 	if (system(sys.c_str()))
@@ -32,6 +34,7 @@ bool ImageCarver::carveImg()
 
 	for (size_t i = 0; i < partition.size(); ++i)
 	{
+		std::cout << "Starting fls for partition with offset " << partition.at(i).first << std::endl;
 		fls(partition.at(i).first, partition.at(i).second);
 	}
 	bool ret = false;
@@ -45,6 +48,7 @@ bool ImageCarver::carveImg()
 		std::string edbInode = carveEDB(partition.at(i).first);
 		if (edbInode == "")
 		{
+			std::cout << "No EDB for partition with offset " << partition.at(i).first << " found." << std::endl; 
 			continue;
 		}
 		ret = true;
@@ -69,6 +73,7 @@ bool ImageCarver::carveImg()
 				if (system(sys.c_str()))
 				{}
 				name += "/";
+				std::cout << "Carving for DB-Files of User " << partition.at(i).second.at(j).first << std::endl;
 				for (size_t k = 0; k < me.size(); ++k)
 				{
 					std::string file = name + me.at(k).second;
@@ -84,6 +89,7 @@ bool ImageCarver::carveImg()
 
 void ImageCarver::mmls()
 {
+	std::cout << "Running 'mmls' to catch all NTFS-Partitions" << std::endl;
 	FILE *pipe;
 	char buf[256];
 	std::string sys = "mmls ";
@@ -120,6 +126,7 @@ void ImageCarver::mmls()
 
 std::string ImageCarver::carveEDB(size_t offset)
 {
+	std::cout << "Carving for EDB-File" << std::endl;
 	const char *findStrings[6] = {"ProgramData", "Microsoft", "Search", "Data", "Applications", "Windows"};
 	char buf[256];
 	
@@ -316,6 +323,7 @@ void ImageCarver::fls(size_t offset, UserDatas &userDatas)
 
 void ImageCarver::icat(size_t offset, std::string inode, std::string name)
 {
+	std::cout << "Extracting (icat) file " << name << " at inode " << inode << std::endl;
 	std::string sys = "icat ";
 	sys += fileName;
 	sys += " -o " + std::to_string(offset);

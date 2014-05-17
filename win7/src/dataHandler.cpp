@@ -15,6 +15,9 @@ void DataHandler::initHandlers()
 {
 	if (imgCarver->carveImg() == false)
 		return;
+	std::cout << std::endl;
+	std::cout << "Could successfully carve relevant EDB- and DB-Files" << std::endl;
+	std::cout << std::endl;
 
 	DIR *dpdf;
 	struct dirent *epdf;
@@ -33,8 +36,7 @@ void DataHandler::initHandlers()
 			} else if (epdf->d_type == DT_DIR)
 			{
 				std::string outName = outPath + epdf->d_name;
-				std::string sys = "rm -f " + outName;
-				sys += "/*";
+				std::string sys = "rm -rf " + outName;
 				if (system(sys.c_str()))
 				{}
 				sys = "mkdir -p " + outName;
@@ -71,10 +73,6 @@ void DataHandler::initHandlers()
 							std::pair<std::string, std::vector<SizeThumbs>> pushMeLater;
 							pushMeLater.first = outFolder;
 				
-							sys = "rm -f " + outFolder;
-							sys += "/*";
-							if (system(sys.c_str()))
-							{}
 							sys = "mkdir -p " + outFolder;
 							if (system(sys.c_str()))
 							{}
@@ -125,11 +123,18 @@ void DataHandler::startHandlers()
 			continue;
 		}
 		in1.second.first->startHandler();
+		std::cout << "Starting Thumbcache-Viewer for all relevant Users" << std::endl; 
 		for (auto in2 : in1.second.second)
 		{
 			for (auto in3 : in2.second)
 			{
-				in3.second->startHandler();
+				if (in3.second->startHandler() == false)
+				{
+					//std::cout << "Error for " << in3.first << " occured. Couldn't load Databases" << std::endl;
+				} else
+				{
+					std::cout << "\tLoading successful: " << in3.first << std::endl;	
+				}
 			}
 		}
 		for (auto in2 : in1.second.second)
@@ -139,6 +144,62 @@ void DataHandler::startHandlers()
 				in3.second->handlerFinished();
 			}
 		}
+		std::cout << "Thumbcache-Viewer and interpreting results is done" << std::endl;
 	}
+	delete imgCarver;
+	linkDBtoEDB();
+}
+
+void DataHandler::linkDBtoEDB()
+{
+	for (auto in1 : thumbVec)
+	{
+		if (!(in1.second.first))
+		{
+			continue;
+		}
+		PartitionFiles *pf = new PartitionFiles();
+		pf->first = in1.first;
+
+		EDBHandler *edbH = in1.second.first;
+		for (auto in2 : in1.second.second)
+		{
+			UserFiles *uf = new UserFiles();
+			std::string name = in2.first;
+			name.pop_back();
+			name = name.substr(name.find_last_of("/")+1);
+			uf->first = name;
+			for (auto in3 : in2.second)
+			{
+				ThumbCacheFiles *tcf = new ThumbCacheFiles();
+				name = in3.first;
+				name = name.substr(name.find_last_of("/")+1);
+				tcf->first = name;
+				std::vector<dbInfo> dbVec = in3.second->getDBVec();
+				for (auto in4 : dbVec)
+				{
+					FileInfo *fi = new FileInfo();
+					fi->second = in4;
+					if (edbH->getHash(fi->second.hash, fi->first) == true)
+					{
+						fi->second.foundInEDB = true;
+						//std::cout << fi->first.sysInfo.cacheID << std::endl;
+					} else
+					{
+						//std::cout << "\t" << fi->second.hash << std::endl;
+					}
+					tcf->second.push_back(*fi);
+				}
+				uf->second.push_back(*tcf);
+			}
+			pf->second.push_back(*uf);
+		}
+		gatheredInfos.push_back(*pf);
+	}
+}
+
+std::vector<PartitionFiles> DataHandler::getGatheredInfos()
+{
+	return this->gatheredInfos;
 }
 

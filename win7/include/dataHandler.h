@@ -24,11 +24,14 @@ class DataHandler
 		ImageCarver *imgCarver;
 
 		AllPartitions thumbVec;
+		std::vector<PartitionFiles> gatheredInfos;
 
 	public:
 		DataHandler(std::string in, std::string out);
 		void startHandlers();
 		void initHandlers();
+		void linkDBtoEDB();
+		std::vector<PartitionFiles> getGatheredInfos();
 };
 
 #endif

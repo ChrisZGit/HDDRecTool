@@ -33,6 +33,7 @@ class DBHandler
 
 		bool startHandler();
 		bool handlerFinished();
+		std::vector<dbInfo> getDBVec();
 };
 
 #endif

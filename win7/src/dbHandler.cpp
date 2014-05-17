@@ -4,11 +4,7 @@ DBHandler::DBHandler(std::string fileN, std::string out)
 {
 	fileName = fileN;
 	outputPath = out;
-	std::string sys = "rm -f ";
-	sys += outputPath + "/*";
-	if (system(sys.c_str()))
-	{}
-	sys = "mkdir -p ";
+	std::string sys = "mkdir -p ";
 	sys += outputPath;
 	if (system(sys.c_str()))
 	{}
@@ -36,16 +32,13 @@ bool DBHandler::startHandler()
 void DBHandler::runThumbCacheViewer()
 {
 #ifndef WINDOWS
-	std::cout << "Now running TCV: " << std::endl;
 	std::string sys = "./bin/thumbCV ";
 	sys += fileName;
 	sys += " ";
 	sys += outputPath;
 	sys += " > /dev/null";
-	std::cout << outputPath << std::endl;
 	if (system(sys.c_str()))
 	{}
-	std::cout << std::endl;
 #endif
 }
 
@@ -76,6 +69,8 @@ bool DBHandler::fillInfoVector()
 		tmp = getInfoAtPos(6);
 		pushMe.headerChecksum = tmp.substr(2);
 		pushMe.md5Sum = "DEFAULT";
+		pushMe.absoluteFileName = outputPath + pushMe.hash;
+		pushMe.foundInEDB=false;
 		dbVec.push_back(pushMe);
 		if (pushMe.dataSize > 0)
 		{
@@ -114,5 +109,10 @@ bool DBHandler::getNextLine()
 	if (!(fs.eof()))
 		return true;
 	return false;
+}
+
+std::vector<dbInfo> DBHandler::getDBVec()
+{
+	return this->dbVec;
 }
 
