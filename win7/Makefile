@@ -19,11 +19,14 @@ objects= \
 		 $(OBJPATH)dbHandler.o\
 		 $(OBJPATH)dataHandler.o\
 
-
+all: thumb
 all: exe
 
 pathmaker:
 	mkdir -p obj/ bin/
+
+thumb: pathmaker
+	$(CC) $(OPT) thumby/main.cpp -o bin/thumbCV
 
 exe: pathmaker $(objects) $(MAIN)
 	$(CC) $(OPT) $(INC) $(LIBS) -o $(BINPATH)runme $(objects) $(MAIN)
@@ -32,4 +35,4 @@ $(OBJPATH)%.o: $(SRCPATH)%.cpp $(INCPATH)%.h
 	$(CC) $(OPT) $(INC) $(LIBS) -c $< -o $@
 
 clean:
-	rm -rf $(OBJPATH) $(BINPATH)/runme
+	rm -rf $(OBJPATH) $(BINPATH)
