@@ -22,9 +22,67 @@ void TexMaker::writeTex(std::vector<PartitionFiles> &p)
 	file.close();
 }
 
-void TexMaker::writeFile(FileInfo &info)
+std::string TexMaker::cleanString(std::string &in)
+{
+	std::string ret = in;
+	size_t off = 0;
+	while ((off=ret.find("\\",off)) != std::string::npos)
+	{
+		ret.replace(off,1,"/");
+		off += 1;
+	}
+	off=0;
+	while ((off=ret.find("_",off)) != std::string::npos)
+	{
+		//ret.replace(off,1,"/");
+		ret.insert(off, "\\");
+		off += 2;
+	}
+	return ret;
+}
+
+void TexMaker::writeExif(pictureInfo &pic)
+{
+	file << "\t\t\\hline\\\\" << std::endl;
+	file << "\t\tHorizontal res& " << pic.hRes << "\\\\" << std::endl;
+	file << "\t\t\\hline\\\\" << std::endl;
+	file << "\t\tVertikal res& " << pic.vRes << "\\\\" << std::endl;
+	file << "\t\t\\hline\\\\" << std::endl;
+	file << "\t\tBitdepth& " << pic.bitDepth << "\\\\" << std::endl;
+	file << "\t\t\\hline\\\\" << std::endl;
+}
+
+void TexMaker::writeSys(systemInfo &sys)
+{
+	file << "\t\tDatasize& " << std::to_string(sys.size/1024) << "KB\\\\" << std::endl;
+	//file << "\t\t\\hline\\\\" << std::endl;
+	//file << "\t\tDate created& " << sys.dateCreated << "\\\\" << std::endl;
+	file << "\t\t\\hline\\\\" << std::endl;
+	file << "\t\tDate accessed& " << sys.dateAccessed << "\\\\" << std::endl;
+	file << "\t\t\\hline\\\\" << std::endl;
+	file << "\t\tDate modified& " << sys.dateModified << "\\\\" << std::endl;
+	file << "\t\t\\hline\\\\" << std::endl;
+	file << "\t\tMIME Type& " << cleanString(sys.MIMEType) << "\\\\" << std::endl;
+	file << "\t\t\\hline\\\\" << std::endl;
+	file << "\t\tFilename& " << cleanString(sys.fileName) << "\\\\" << std::endl;
+	file << "\t\t\\hline\\\\" << std::endl;
+	file << "\t\tOwner& " << cleanString(sys.owner) << "\\\\" << std::endl;
+	file << "\t\t\\hline\\\\" << std::endl;
+}
+
+void TexMaker::writeMeta(dbInfo &db)
+{
+	file << "\t\tThumbsize & " << std::to_string(db.dataSize/1024) << "KB\\\\" << std::endl;
+	file << "\t\t\\hline\\\\" << std::endl;
+	file << "\t\tmd5Sum & " << db.md5Sum << "\\\\" << std::endl;
+	file << "\t\t\\hline\\\\" << std::endl;
+}
+
+void TexMaker::writeFile(FileInfo &info, bool write)
 {
 	static size_t count=0;
+	if (info.second.foundInEDB != write)
+		return;
 	file << "\\begin{figure}[h]" << std::endl;
 	file << "\t\\centering" << std::endl;
 	std::string tmp = info.second.absoluteFileName;
@@ -32,9 +90,24 @@ void TexMaker::writeFile(FileInfo &info)
 	if (system(sys.c_str()))
 	{}
 	file << "\t\t\\includegraphics{" << tmp << ".png}"<< std::endl;
-	file << "\\end{figure}" << std::endl;
-	file << "Bla" << std::endl;
-		file << "\\newpage" << std::endl;
+	file << "\t\\caption{Thumbnail 0x" << info.second.hash << "}" << std::endl;
+	file << "\t\\label{fig:Pic" << std::to_string(count) << "}" << std::endl;
+	file << "\\end{figure}" << std::endl << std::endl;
+
+	file << "\\newpage" << std::endl;
+	file << "\\begin{table}[h]" << std::endl;
+	file << "\t\\centering" << std::endl;
+	file << "\t\\begin{tabular}{c|c}" << std::endl;
+	writeMeta(info.second);
+	if (info.second.foundInEDB==true)
+	{
+		writeSys(info.first.sysInfo);
+		writeExif(info.first.picInfo);
+	}
+	file << "\t\\end{tabular}" << std::endl;
+	file << "\t\\caption{Meta-Data for Figure~\\ref{fig:Pic" << std::to_string(count) << "}}" << std::endl;
+	file << "\\end{table}" << std::endl;
+	file << "\\newpage" << std::endl;
 	++count;
 }
 
@@ -49,7 +122,14 @@ void TexMaker::writeThumb(ThumbCacheFiles &tcf)
 	file << "\\subsubsection{" << tmp << "}" << std::endl;
 	for (auto in : tcf.second)
 	{
-		writeFile(in);
+		writeFile(in, true);
+		file << std::endl;
+	}
+	file << "\\newpage" << std::endl;
+	file << "\\newpage" << std::endl;
+	for (auto in : tcf.second)
+	{
+		writeFile(in, false);
 		file << std::endl;
 	}
 	file << std::endl << std::endl;
@@ -76,6 +156,7 @@ void TexMaker::writePartition(PartitionFiles &partition)
 	{
 		file << "No User with Thumbcaches found!" << std::endl;
 	}
+	file << "\\newpage" << std::endl;
 	for (auto in : partition.second)
 	{
 		writeUser(in);

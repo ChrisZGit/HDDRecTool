@@ -14,11 +14,13 @@ class TexMaker
 		std::string path;
 		std::ofstream file;
 
+
+		std::string cleanString(std::string &);
 		void writeExif(pictureInfo &pic);
 		void writeSys(systemInfo &sys);
 		void writeMeta(dbInfo &db);
 		
-		void writeFile(FileInfo &f);
+		void writeFile(FileInfo &f, bool);
 		void writeThumb(ThumbCacheFiles &t);
 		void writeUser(UserFiles &u);
 		void writePartition(PartitionFiles &p);
