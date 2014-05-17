@@ -147,7 +147,6 @@ void DataHandler::startHandlers()
 		std::cout << "Thumbcache-Viewer and interpreting results is done" << std::endl;
 	}
 	delete imgCarver;
-	linkDBtoEDB();
 }
 
 void DataHandler::linkDBtoEDB()
@@ -159,13 +158,15 @@ void DataHandler::linkDBtoEDB()
 			continue;
 		}
 		PartitionFiles *pf = new PartitionFiles();
-		pf->first = in1.first;
+		std::string name = in1.first;
+		name = name.substr(name.find_last_of("/")+1);
+		pf->first = name;
 
 		EDBHandler *edbH = in1.second.first;
 		for (auto in2 : in1.second.second)
 		{
 			UserFiles *uf = new UserFiles();
-			std::string name = in2.first;
+			name = in2.first;
 			name.pop_back();
 			name = name.substr(name.find_last_of("/")+1);
 			uf->first = name;
@@ -188,9 +189,11 @@ void DataHandler::linkDBtoEDB()
 					{
 						//std::cout << "\t" << fi->second.hash << std::endl;
 					}
-					tcf->second.push_back(*fi);
+					if (fi->second.dataSize>0)
+						tcf->second.push_back(*fi);
 				}
-				uf->second.push_back(*tcf);
+				if (!tcf->second.empty())
+					uf->second.push_back(*tcf);
 			}
 			pf->second.push_back(*uf);
 		}

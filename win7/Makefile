@@ -14,18 +14,19 @@ OBJPATH=./obj/
 
 objects= \
 		 $(OBJPATH)edbHandler.o\
+		 $(OBJPATH)texMaker.o\
 		 $(OBJPATH)imageCarver.o\
 		 $(OBJPATH)hashSumHandler.o\
 		 $(OBJPATH)dbHandler.o\
 		 $(OBJPATH)dataHandler.o\
 
-all: thumb
 all: exe
+all: thumb
 
 pathmaker:
 	mkdir -p obj/ bin/
 
-thumb: pathmaker
+thumb: ./thumby/main.cpp
 	$(CC) $(OPT) thumby/main.cpp -o bin/thumbCV
 
 exe: pathmaker $(objects) $(MAIN)

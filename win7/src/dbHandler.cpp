@@ -69,7 +69,7 @@ bool DBHandler::fillInfoVector()
 		tmp = getInfoAtPos(6);
 		pushMe.headerChecksum = tmp.substr(2);
 		pushMe.md5Sum = "DEFAULT";
-		pushMe.absoluteFileName = outputPath + pushMe.hash;
+		pushMe.absoluteFileName = outputPath +"0x"+ pushMe.hash;
 		pushMe.foundInEDB=false;
 		dbVec.push_back(pushMe);
 		if (pushMe.dataSize > 0)

@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <iostream>
 
+#include <texMaker.h>
 #include <dataHandler.h>
 
 int main(int argc, char *argv[])
@@ -57,6 +58,11 @@ int main(int argc, char *argv[])
 	DataHandler newOne(inPath, outPath);
 	newOne.initHandlers();
 	newOne.startHandlers();
+	newOne.linkDBtoEDB();
+
+	TexMaker bla(outPath);
+	auto abc = newOne.getGatheredInfos();
+	bla.writeTex(abc);
 	return  0;
 }
 
