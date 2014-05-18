@@ -15,6 +15,7 @@ OBJPATH=./obj/
 objects= \
 		 $(OBJPATH)edbHandler.o\
 		 $(OBJPATH)texMaker.o\
+		 $(OBJPATH)xmlMaker.o\
 		 $(OBJPATH)imageCarver.o\
 		 $(OBJPATH)hashSumHandler.o\
 		 $(OBJPATH)dbHandler.o\

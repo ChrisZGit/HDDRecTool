@@ -94,7 +94,8 @@ void TexMaker::writeFile(FileInfo &info, bool write)
 	file << "\t\\label{fig:Pic" << std::to_string(count) << "}" << std::endl;
 	file << "\\end{figure}" << std::endl << std::endl;
 
-	file << "\\newpage" << std::endl;
+	if (info.second.foundInEDB==true)
+		file << "\\newpage" << std::endl;
 	file << "\\begin{table}[h]" << std::endl;
 	file << "\t\\centering" << std::endl;
 	file << "\t\\begin{tabular}{c|c}" << std::endl;
@@ -125,7 +126,6 @@ void TexMaker::writeThumb(ThumbCacheFiles &tcf)
 		writeFile(in, true);
 		file << std::endl;
 	}
-	file << "\\newpage" << std::endl;
 	file << "\\newpage" << std::endl;
 	for (auto in : tcf.second)
 	{

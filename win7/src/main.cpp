@@ -4,6 +4,7 @@
 #include <iostream>
 
 #include <texMaker.h>
+#include <xmlMaker.h>
 #include <dataHandler.h>
 
 int main(int argc, char *argv[])
@@ -63,6 +64,8 @@ int main(int argc, char *argv[])
 	TexMaker bla(outPath);
 	auto abc = newOne.getGatheredInfos();
 	bla.writeTex(abc);
+	XmlMaker bla2(outPath);
+	bla2.writeXml(abc);
 	return  0;
 }
 
