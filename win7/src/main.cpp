@@ -15,12 +15,15 @@ int main(int argc, char *argv[])
 	if (argc < 3)
 	{
 		std::cerr << "Not enough Parameters. Try './bin/runme [-p PathToInputFolder] [-o PathToOutput-Folder]'" << std::endl;
+		std::cerr << "You can also add [-f tex] or [-f xml] to specify that you only want one output. Else both are created." << std::endl;
 		return 1;
 	} 
 
 	bool in = false;
 	bool out = false;
-	for (int i = 1; i < argc-1; i=i+1)
+	bool tex = false;
+	bool xml = false;
+	for (int i = 1; i < argc-1; i=i+2)
 	{
 		std::string input = argv[i];
 		if (input.compare("-p") == 0)
@@ -35,11 +38,28 @@ int main(int argc, char *argv[])
 			out = true;
 			std::cout << "Output Folder: " << outPath << std::endl;
 		}
+		else if (input.compare("-f") == 0)
+		{
+			std::string temp = argv[i+1];
+			if (temp.compare("tex") == 0)
+			{
+				tex = true;
+				std::cout << "Output File: Tex document" << std::endl;
+			}
+			else if (temp.compare("xml") == 0)
+			{
+				xml = true;
+				std::cout << "Output File: XML document" << std::endl;
+			}
+		}
 		else
 		{
 			continue;
 		}
 	}
+
+	if (xml == false && tex == false)
+		std::cout << "Output File: XML document and Tex document" << std::endl;
 
 	if (in == true && out == true)
 	{
@@ -61,11 +81,27 @@ int main(int argc, char *argv[])
 	newOne.startHandlers();
 	newOne.linkDBtoEDB();
 
-	TexMaker bla(outPath);
-	auto abc = newOne.getGatheredInfos();
-	bla.writeTex(abc);
-	XmlMaker bla2(outPath);
-	bla2.writeXml(abc);
+	if (tex == true)
+	{
+		TexMaker bla(outPath);
+		auto abc = newOne.getGatheredInfos();
+		bla.writeTex(abc);
+	}
+	else if (xml == true)
+	{
+		XmlMaker bla2(outPath);
+		auto abc = newOne.getGatheredInfos();
+		bla2.writeXml(abc);
+	}
+	else
+	{
+		TexMaker bla(outPath);
+		auto abc = newOne.getGatheredInfos();
+		bla.writeTex(abc);
+		
+		XmlMaker bla2(outPath);
+		bla2.writeXml(abc);
+	}
 	return  0;
 }
 
