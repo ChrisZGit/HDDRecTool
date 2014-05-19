@@ -5,8 +5,9 @@ XmlMaker::XmlMaker(std::string p)
 	this->path = p + "thumbcaches.xml";
 }
 
-void XmlMaker::writeXml(std::vector<PartitionFiles> &p)
+void XmlMaker::writeXml(std::vector<PartitionFiles> &p, bool edb)
 {
+	edbOnly = edb;
 	file.open(path.c_str(), std::fstream::out);
 
 	file << "<Thumbcache-Extractor>" << std::endl;
@@ -84,6 +85,9 @@ void XmlMaker::writeMeta(dbInfo &db)
 
 void XmlMaker::writeFile(FileInfo &info, bool write)
 {
+	if (edbOnly == true && info.second.foundInEDB == false)
+		return;
+
 	if (info.second.foundInEDB != write)
 		return;
 	std::string tmp = info.second.absoluteFileName;

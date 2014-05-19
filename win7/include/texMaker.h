@@ -13,7 +13,7 @@ class TexMaker
 	private:
 		std::string path;
 		std::ofstream file;
-
+		bool edbOnly;
 
 		std::string cleanString(std::string &);
 		void writeExif(pictureInfo &pic);
@@ -28,7 +28,7 @@ class TexMaker
 	public:
 		TexMaker(std::string p);
 
-		void writeTex(std::vector<PartitionFiles> &p);
+		void writeTex(std::vector<PartitionFiles> &p, bool edb);
 };
 
 #endif

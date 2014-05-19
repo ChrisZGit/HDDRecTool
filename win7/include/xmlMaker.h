@@ -13,6 +13,7 @@ class XmlMaker
 	private:
 		std::string path;
 		std::ofstream file;
+		bool edbOnly;
 
 		std::string cleanString(std::string &);
 		void writeExif(pictureInfo &pic);
@@ -27,7 +28,7 @@ class XmlMaker
 	public:
 		XmlMaker(std::string p);
 
-		void writeXml(std::vector<PartitionFiles> &p);
+		void writeXml(std::vector<PartitionFiles> &p, bool edb);
 };
 
 #endif

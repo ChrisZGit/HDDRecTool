@@ -5,8 +5,9 @@ TexMaker::TexMaker(std::string p)
 	this->path = p + "thumbcaches.tex";
 }
 
-void TexMaker::writeTex(std::vector<PartitionFiles> &p)
+void TexMaker::writeTex(std::vector<PartitionFiles> &p, bool edb)
 {
+	edbOnly = edb;
 	file.open(path.c_str(), std::fstream::out);
 
 	file << "The following thumbcaches have been extracted by 'Thumby-Extractor' (c)crisbi (Christian Zoubek, Sabine Seufert)." << std::endl;
@@ -80,6 +81,8 @@ void TexMaker::writeMeta(dbInfo &db)
 
 void TexMaker::writeFile(FileInfo &info, bool write)
 {
+	if (edbOnly == true && info.second.foundInEDB == false)
+		return;
 	static size_t count=0;
 	if (info.second.foundInEDB != write)
 		return;

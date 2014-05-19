@@ -1,11 +1,8 @@
-
 #include <fstream>
 #include <cstdlib>
 #include <iostream>
 
-#include <texMaker.h>
-#include <xmlMaker.h>
-#include <dataHandler.h>
+#include <thumbWriter.h>
 
 int main(int argc, char *argv[])
 {
@@ -15,7 +12,9 @@ int main(int argc, char *argv[])
 	if (argc < 3)
 	{
 		std::cerr << "Not enough Parameters. Try './bin/runme [-p PathToInputFolder] [-o PathToOutput-Folder]'" << std::endl;
-		std::cerr << "You can also add [-f tex] or [-f xml] to specify that you only want one output. Else both are created." << std::endl;
+		std::cerr << "You can also add:" << std::endl;
+		std::cerr << "[-f tex] or [-f xml] to specify that you only want one output. Else both are created." << std::endl;
+		std::cerr << "[-i edb] to specify that you only want files which have an entry in the Windows-EDB." << std::endl;
 		return 1;
 	} 
 
@@ -23,6 +22,7 @@ int main(int argc, char *argv[])
 	bool out = false;
 	bool tex = false;
 	bool xml = false;
+	bool edb = false;
 	for (int i = 1; i < argc-1; i=i+1)
 	{
 		std::string input = argv[i];
@@ -52,6 +52,15 @@ int main(int argc, char *argv[])
 				std::cout << "Output File: XML document" << std::endl;
 			}
 		}
+		else if (input.compare("-i") == 0)
+		{
+			std::string temp = argv[i+1];
+			if (temp.compare("edb") == 0)
+			{
+				edb = true;
+				std::cout << "Output Info: With EDB-Entry only" << std::endl;
+			}
+		}
 		else
 		{
 			continue;
@@ -76,41 +85,12 @@ int main(int argc, char *argv[])
 	if (!(outPath.at(outPath.size()-1) == '/'))
 		outPath += "/";
 
-	DataHandler newOne(inPath, outPath);
-	newOne.initHandlers();
-	newOne.startHandlers();
-	newOne.linkDBtoEDB();
+	ThumbWriter thumb(inPath, outPath);
+	thumb.setTex(tex);
+	thumb.setXml(xml);
+	thumb.setEdb(edb);
+	thumb.writeThumbs();
 
-	if (tex == true)
-	{
-		std::cout << "Starting to write Tex File." << std::endl;
-		TexMaker bla(outPath);
-		auto abc = newOne.getGatheredInfos();
-		bla.writeTex(abc);
-		std::cout << "Done with writing Tex file." << std::endl;
-	}
-	else if (xml == true)
-	{
-		
-		std::cout << "Starting to write XML File." << std::endl;
-		XmlMaker bla2(outPath);
-		auto abc = newOne.getGatheredInfos();
-		bla2.writeXml(abc);
-		std::cout << "Donw with writing XML File." << std::endl;
-	}
-	else
-	{
-		std::cout << "Starting to write Tex File." << std::endl;
-		TexMaker bla(outPath);
-		auto abc = newOne.getGatheredInfos();
-		bla.writeTex(abc);
-		std::cout << "Done with writing Tex File." << std::endl;
-		
-		std::cout << "Starting to write XML File." << std::endl;
-		XmlMaker bla2(outPath);
-		bla2.writeXml(abc);
-		std::cout << "Done with writing XML File." << std::endl;
-	}
 	return  0;
 }
 
