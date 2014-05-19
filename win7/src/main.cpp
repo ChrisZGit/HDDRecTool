@@ -23,7 +23,7 @@ int main(int argc, char *argv[])
 	bool out = false;
 	bool tex = false;
 	bool xml = false;
-	for (int i = 1; i < argc-1; i=i+2)
+	for (int i = 1; i < argc-1; i=i+1)
 	{
 		std::string input = argv[i];
 		if (input.compare("-p") == 0)
