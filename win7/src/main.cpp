@@ -83,24 +83,33 @@ int main(int argc, char *argv[])
 
 	if (tex == true)
 	{
+		std::cout << "Starting to write Tex File." << std::endl;
 		TexMaker bla(outPath);
 		auto abc = newOne.getGatheredInfos();
 		bla.writeTex(abc);
+		std::cout << "Done with writing Tex file." << std::endl;
 	}
 	else if (xml == true)
 	{
+		
+		std::cout << "Starting to write XML File." << std::endl;
 		XmlMaker bla2(outPath);
 		auto abc = newOne.getGatheredInfos();
 		bla2.writeXml(abc);
+		std::cout << "Donw with writing XML File." << std::endl;
 	}
 	else
 	{
+		std::cout << "Starting to write Tex File." << std::endl;
 		TexMaker bla(outPath);
 		auto abc = newOne.getGatheredInfos();
 		bla.writeTex(abc);
+		std::cout << "Done with writing Tex File." << std::endl;
 		
+		std::cout << "Starting to write XML File." << std::endl;
 		XmlMaker bla2(outPath);
 		bla2.writeXml(abc);
+		std::cout << "Done with writing XML File." << std::endl;
 	}
 	return  0;
 }
