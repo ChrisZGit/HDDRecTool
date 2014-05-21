@@ -7,6 +7,7 @@ ThumbWriter::ThumbWriter(std::string in, std::string out)
 	writeTex = false;
 	writeXml = false;
 	edbOnly = false;
+	isExtracted = false;
 }
 
 void ThumbWriter::setTex(bool tex)
@@ -24,8 +25,19 @@ void ThumbWriter::setEdb(bool edb)
 	edbOnly = edb;
 }
 
+void ThumbWriter::setExtracted(bool ex)
+{
+	isExtracted = ex;
+}
+
 void ThumbWriter::writeThumbs()
 {
+	if (isExtracted == true)
+	{
+		std::cout << "Image doesn't have to be extracted. Starting to work with the given Thumbcaches." << std::endl;
+		//was auch immer dann hier gemacht werden muss
+	}
+
 	DataHandler newOne(inPath, outPath);
 	newOne.initHandlers();
 	newOne.startHandlers();

@@ -11,7 +11,8 @@ int main(int argc, char *argv[])
 	std::string outPath;
 	if (argc < 3)
 	{
-		std::cerr << "Not enough Parameters. Try './bin/runme [-p PathToInputFolder] [-o PathToOutput-Folder]'" << std::endl;
+		std::cerr << "Not enough Parameters. Try './bin/runme [-(d)p PathToInputFolderWithImage] [-o PathToOutputFolder]'" << std::endl;
+		std::cerr << "If you use [-dp] instead of [-p] it's expected that there are the extracted databases." << std::endl;
 		std::cerr << "You can also add:" << std::endl;
 		std::cerr << "[-f tex] or [-f xml] to specify that you only want one output. Else both are created." << std::endl;
 		std::cerr << "[-i edb] to specify that you only want files which have an entry in the Windows-EDB." << std::endl;
@@ -23,6 +24,7 @@ int main(int argc, char *argv[])
 	bool tex = false;
 	bool xml = false;
 	bool edb = false;
+	bool extracted = false;
 	for (int i = 1; i < argc-1; i=i+1)
 	{
 		std::string input = argv[i];
@@ -61,6 +63,13 @@ int main(int argc, char *argv[])
 				std::cout << "Output Info: With EDB-Entry only" << std::endl;
 			}
 		}
+		else if (input.compare("-dp") == 0)
+		{
+			inPath = argv[i+1];
+			extracted = true;
+			in = true;
+			std::cout << "Directory with Thumbcaches: " << inPath << std::endl;
+		}
 		else
 		{
 			continue;
@@ -76,7 +85,7 @@ int main(int argc, char *argv[])
 	} else
 	{
 		std::cout << "Not a valid Input. Please try again." << std::endl;
-		std::cout << "Please use: './bin/runme [-p PathToInputfolder] [-o PathToOutput-Folder]'" << std::endl;
+		std::cerr << "Please use: './bin/runme [-(d)p PathToInputFolderWithImage] [-o PathToOutputFolder]'" << std::endl;
 		return 1;
 	}
 
@@ -89,6 +98,7 @@ int main(int argc, char *argv[])
 	thumb.setTex(tex);
 	thumb.setXml(xml);
 	thumb.setEdb(edb);
+	thumb.setExtracted(extracted);
 	thumb.writeThumbs();
 
 	return  0;

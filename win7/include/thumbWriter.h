@@ -17,6 +17,7 @@ class ThumbWriter
 		bool writeTex;
 		bool writeXml;
 		bool edbOnly;
+		bool isExtracted;
 
 	public:
 		ThumbWriter(std::string in, std::string out);
@@ -24,6 +25,7 @@ class ThumbWriter
 		void setTex(bool tex);
 		void setXml(bool xml);
 		void setEdb(bool edb);
+		void setExtracted(bool ex);
 
 		void writeThumbs();
 
