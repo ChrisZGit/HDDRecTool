@@ -8,6 +8,7 @@ ThumbWriter::ThumbWriter(std::string in, std::string out)
 	writeXml = false;
 	edbOnly = false;
 	isExtracted = false;
+	offset = 0;
 }
 
 void ThumbWriter::setTex(bool tex)
@@ -30,12 +31,22 @@ void ThumbWriter::setExtracted(bool ex)
 	isExtracted = ex;
 }
 
+void ThumbWriter::setOffset(size_t off)
+{
+	offset = off;
+}
+
 void ThumbWriter::writeThumbs()
 {
 	if (isExtracted == true)
 	{
 		std::cout << "Image doesn't have to be extracted. Starting to work with the given Thumbcaches." << std::endl;
 		//was auch immer dann hier gemacht werden muss
+	}
+	if (offset != 0)
+	{
+		std::cout << "Offset to a partition has been set. Starting to work on that." << std::endl;
+		//was auch immer hier gemacht werden muss
 	}
 
 	DataHandler newOne(inPath, outPath);
