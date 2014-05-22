@@ -18,6 +18,7 @@ bool DataHandler::carveImg()
 	std::cout << std::endl;
 	std::cout << "Could successfully carve relevant EDB- and DB-Files" << std::endl;
 	std::cout << std::endl;
+	return true;
 }
 
 bool DataHandler::initHandlers()
