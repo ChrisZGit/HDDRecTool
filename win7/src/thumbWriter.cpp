@@ -8,7 +8,7 @@ ThumbWriter::ThumbWriter(std::string in, std::string out)
 	writeXml = false;
 	edbOnly = false;
 	isExtracted = false;
-	offset = 0;
+	offset = -1;
 }
 
 void ThumbWriter::setTex(bool tex)
@@ -31,26 +31,51 @@ void ThumbWriter::setExtracted(bool ex)
 	isExtracted = ex;
 }
 
-void ThumbWriter::setOffset(size_t off)
+void ThumbWriter::setOffset(int off)
 {
 	offset = off;
 }
 
 void ThumbWriter::writeThumbs()
 {
+	DataHandler newOne(inPath, outPath);
 	if (isExtracted == true)
 	{
 		std::cout << "Image doesn't have to be extracted. Starting to work with the given Thumbcaches." << std::endl;
-		//was auch immer dann hier gemacht werden muss
+		std::string sys = "rm -rf ./databases314159265/";
+		if (system(sys.c_str()))
+		{}
+		sys = "mkdir ./databases314159265";
+		if (system(sys.c_str()))
+		{}
+		sys += "/0";
+		if (system(sys.c_str()))
+		{}
+		sys += "/Userinput";
+		if (system(sys.c_str()))
+		{}
+		sys = "cp " + inPath + "/*.db ./databases314159265/0/Userinput/";
+		if (system(sys.c_str()))
+		{}
+		sys = "cp " + inPath + "/*.edb ./databases314159265/0/";
+		if (system(sys.c_str()))
+		{}
 	}
-	if (offset != 0)
+	else
+	{
+		newOne.carveImg();
+	}
+	if (!(offset <= -1))
 	{
 		std::cout << "Offset to a partition has been set. Starting to work on that." << std::endl;
-		//was auch immer hier gemacht werden muss
+		newOne.setOffset(offset);
 	}
 
-	DataHandler newOne(inPath, outPath);
-	newOne.initHandlers();
+	if (newOne.initHandlers() == false)
+	{
+		std::cout << "Could not init handlers.\nHave to abort" << std::endl;
+		return;
+	}
 	newOne.startHandlers();
 	newOne.linkDBtoEDB();
 
@@ -68,7 +93,7 @@ void ThumbWriter::writeThumbs()
 		XmlMaker bla2(outPath);
 		auto abc = newOne.getGatheredInfos();
 		bla2.writeXml(abc, edbOnly);
-		std::cout << "Donw with writing XML File." << std::endl;
+		std::cout << "Done with writing XML File." << std::endl;
 	}
 	else
 	{

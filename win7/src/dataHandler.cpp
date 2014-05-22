@@ -8,20 +8,23 @@ DataHandler::DataHandler(std::string in, std::string out)
 	inPath = in;
 	outPath = out;
 
-	imgCarver = new ImageCarver(in, "./databases/");
+	imgCarver = new ImageCarver(in, "./databases314159265/");
 }
 
-void DataHandler::initHandlers()
+bool DataHandler::carveImg()
 {
 	if (imgCarver->carveImg() == false)
-		return;
+		return false;
 	std::cout << std::endl;
 	std::cout << "Could successfully carve relevant EDB- and DB-Files" << std::endl;
 	std::cout << std::endl;
+}
 
+bool DataHandler::initHandlers()
+{
 	DIR *dpdf;
 	struct dirent *epdf;
-	std::string pathName = "./databases/";
+	std::string pathName = "./databases314159265/";
 	dpdf = opendir(pathName.c_str());
 
 	if (dpdf != NULL)
@@ -111,9 +114,10 @@ void DataHandler::initHandlers()
 			}
 		}
 	}
+	return true;
 }
 
-void DataHandler::startHandlers()
+bool DataHandler::startHandlers()
 {
 	for (auto in1 : thumbVec)
 	{
@@ -147,6 +151,7 @@ void DataHandler::startHandlers()
 		std::cout << "Thumbcache-Viewer and interpreting results is done" << std::endl;
 	}
 	delete imgCarver;
+	return true;
 }
 
 void DataHandler::linkDBtoEDB()
@@ -199,6 +204,12 @@ void DataHandler::linkDBtoEDB()
 		}
 		gatheredInfos.push_back(*pf);
 	}
+}
+
+void DataHandler::setOffset(int off)
+{
+	if (imgCarver)
+		imgCarver->setOffset(off);
 }
 
 std::vector<PartitionFiles> DataHandler::getGatheredInfos()

@@ -1,5 +1,6 @@
 #include <imageCarver.h>
 
+//explicit destructor - needed for systemcall 'rm'
 ImageCarver::~ImageCarver()
 {
 	std::string sys = "rm -rf ";
@@ -12,17 +13,31 @@ ImageCarver::ImageCarver(std::string in, std::string out)
 {
 	fileName = in.substr(0,in.length()-1);
 	outputPath = out;
+	partitionOffset=-1;
+}
+
+void ImageCarver::setOffset(int offset)
+{
+	this->partitionOffset = offset;
 }
 
 bool ImageCarver::carveImg()
 {
-	mmls();
+	if (partitionOffset == -1)
+	{
+		mmls();
+	} else
+	{
+		std::pair<size_t, UserDatas> pushMe;
+		UserDatas *user = new UserDatas;
+		pushMe = std::make_pair(partitionOffset, *user);
+		partition.push_back(pushMe);	
+	}
 	if (partition.size()==0)
 	{
-		std::cout << "None found! Have to abort" << std::endl;
+		std::cout << "No partition found! " << std::endl;
 		return false;
 	}
-	std::cout << "Found: " << partition.size() << " partitions" << std::endl;
 	std::string sys = "rm -rf ";
 	sys += outputPath;
 	if (system(sys.c_str()))
@@ -121,7 +136,17 @@ void ImageCarver::mmls()
 			}
 		}
 	}
+	std::cout << "Found: " << partition.size() << " partition(s)" << std::endl;
 	pclose(pipe);
+	if (partition.size() == 0)
+	{
+		//fls exceptionhandling
+		std::cout << "mmls failed - Checking if it's a single partition!" << std::endl;
+		std::pair<size_t, UserDatas> pushMe;
+		UserDatas *user = new UserDatas;
+		pushMe = std::make_pair(0, *user);
+		partition.push_back(pushMe);
+	}
 }
 
 std::string ImageCarver::carveEDB(size_t offset)

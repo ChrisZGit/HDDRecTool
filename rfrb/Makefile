@@ -25,7 +25,7 @@ pathmaker:
 	mkdir -p obj/ bin/
 
 exe: pathmaker $(objects) $(MAIN)
-	$(CC) $(OPT) $(INC) $(LIBS) -o $(BINPATH)runme $(objects) $(MAIN)
+	$(CC) $(OPT) $(INC) $(LIBS) -o $(BINPATH)rfrb $(objects) $(MAIN)
 
 $(OBJPATH)raidSystem.o: $(INCPATH)defines.h $(INCPATH)raidSystem.h $(SRCPATH)raidSystem.cpp
 	$(CC) $(OPT) $(INC) $(LIBS) -c -o $(OBJPATH)raidSystem.o $(SRCPATH)raidSystem.cpp

@@ -23,6 +23,7 @@ class ImageCarver
 		Partitions partition;
 
 		void mmls();
+		int partitionOffset;
 		void fls(size_t offset, UserDatas &);
 		void icat(size_t offset, std::string inode, std::string name);
 		std::string carveEDB(size_t offset);
@@ -31,6 +32,7 @@ class ImageCarver
 		~ImageCarver();
 		ImageCarver(std::string, std::string);
 
+		void setOffset(int offset);
 		bool carveImg();
 
 };

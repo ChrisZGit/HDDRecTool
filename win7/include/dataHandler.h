@@ -28,9 +28,11 @@ class DataHandler
 
 	public:
 		DataHandler(std::string in, std::string out);
-		void startHandlers();
-		void initHandlers();
+		bool carveImg();
+		bool initHandlers();
+		bool startHandlers();
 		void linkDBtoEDB();
+		void setOffset(int offset);
 		std::vector<PartitionFiles> getGatheredInfos();
 };
 

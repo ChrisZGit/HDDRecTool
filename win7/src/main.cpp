@@ -27,7 +27,7 @@ int main(int argc, char *argv[])
 	bool xml = false;
 	bool edb = false;
 	bool extracted = false;
-	size_t offset;
+	int offset=-1;
 	for (int i = 1; i < argc-1; i=i+1)
 	{
 		std::string input = argv[i];
@@ -98,7 +98,7 @@ int main(int argc, char *argv[])
 		std::cerr << "[-a offset] to specify the offset of the partition you want to analyse. Other partitions are ignored in that case." << std::endl;
 		return 1;
 	} //folder with databases and an offset in an image was in the input. not valid
-	else if (offset != 0 && extracted == true)
+	else if (offset != -1 && extracted == true)
 	{
 		std::cout << "Not a valid Input. Please try again." << std::endl;
 		std::cerr << "Please use: './bin/runme [-(d)p PathToInputFolderWithImage] [-o PathToOutputFolder]'" << std::endl;
