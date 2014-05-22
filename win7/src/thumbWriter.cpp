@@ -63,7 +63,11 @@ void ThumbWriter::writeThumbs()
 	}
 	else
 	{
-		newOne.carveImg();
+		if (newOne.carveImg() == false)
+		{
+			std::cerr << "Carving image failed. Have to abort." << std::endl;
+			exit(1);
+		}
 	}
 	if (!(offset <= -1))
 	{
