@@ -6,13 +6,15 @@
 #include <string>
 #include <vector>
 
+#include <fileWriter.h>
 #include <defines.h>
 
 class TexMaker
 {
 	private:
 		std::string path;
-		std::ofstream file;
+		//std::ofstream file;
+		FileWriter *file;
 		bool edbOnly;
 
 		std::string cleanString(std::string &);

@@ -6,6 +6,7 @@ std::mutex mtx;
 DataHandler::DataHandler(std::string in, std::string out)
 {
 	inPath = in;
+	loadAvail=true;
 	outPath = out;
 
 	imgCarver = new ImageCarver(in, "./databases314159265/");
@@ -18,6 +19,7 @@ bool DataHandler::carveImg()
 	std::cout << std::endl;
 	std::cout << "Could successfully carve relevant EDB- and DB-Files" << std::endl;
 	std::cout << std::endl;
+	return true;
 }
 
 bool DataHandler::initHandlers()
