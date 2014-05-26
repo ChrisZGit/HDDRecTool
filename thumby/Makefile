@@ -30,8 +30,8 @@ all: exe
 pathmaker:
 	mkdir -p obj/ bin/
 
-thumb: ./thumby/main.cpp
-	$(CC) $(OPT) thumby/main.cpp -o bin/thumbCV && echo '' && echo '' && echo "Real thumby compilation now" && echo ''
+thumb: ./thumbviewer/main.cpp
+	$(CC) $(OPT) thumbviewer/main.cpp -o bin/thumbCV && echo '' && echo '' && echo "Real thumby compilation now" && echo ''
 
 exe: $(objects) $(MAIN)
 	$(CC) $(OPT) $(INC) $(LIBS) -o $(BINPATH)runme $(objects) $(MAIN)
