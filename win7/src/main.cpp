@@ -36,12 +36,14 @@ int main(int argc, char *argv[])
 			inPath = argv[i+1];
 			in = true;
 			std::cout << "Input Folder: " << inPath << std::endl;
+			++i;
 		}
 		else if (input.compare("-o") == 0)
 		{
 			outPath = argv[i+1];
 			out = true;
 			std::cout << "Output Folder: " << outPath << std::endl;
+			++i;
 		}
 		else if (input.compare("-f") == 0)
 		{
@@ -56,6 +58,7 @@ int main(int argc, char *argv[])
 				xml = true;
 				std::cout << "Output File: XML document" << std::endl;
 			}
+			++i;
 		}
 		else if (input.compare("-i") == 0)
 		{
@@ -65,6 +68,7 @@ int main(int argc, char *argv[])
 				edb = true;
 				std::cout << "Output Info: With EDB-Entry only" << std::endl;
 			}
+			++i;
 		}
 		else if (input.compare("-dp") == 0)
 		{
@@ -72,11 +76,13 @@ int main(int argc, char *argv[])
 			extracted = true;
 			in2 = true;
 			std::cout << "Directory with Thumbcaches: " << inPath << std::endl;
+			++i;
 		}
 		else if (input.compare("-a") == 0)
 		{
 			offset = atoi(argv[i+1]);
 			std::cout << "Partition with offset: " << offset << std::endl;
+			++i;
 		}
 		else
 		{

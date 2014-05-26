@@ -83,6 +83,19 @@ void ThumbWriter::writeThumbs()
 	newOne.startHandlers();
 	newOne.linkDBtoEDB();
 
+	auto xml = [this] (std::vector<PartitionFiles> gathered) -> void
+	{
+		XmlMaker t(outPath);
+		t.writeXml(gathered, edbOnly);
+		return;
+	};
+	auto tex = [this] (std::vector<PartitionFiles> gathered) -> void
+	{
+		TexMaker t(outPath);
+		t.writeTex(gathered, edbOnly);
+		return;
+	};
+
 	if (writeTex == true)
 	{
 		std::cout << "Starting to write Tex File." << std::endl;
@@ -101,7 +114,13 @@ void ThumbWriter::writeThumbs()
 	}
 	else
 	{
-		std::cout << "Starting to write Tex File." << std::endl;
+		std::cout << "Starting to write Tex and Xml File." << std::endl;
+		auto abc = newOne.getGatheredInfos();
+		std::future<void> t = std::async(std::launch::async, tex, abc);
+		std::future<void> x = std::async(std::launch::async, xml, abc);
+		t.get();
+		x.get();
+		/*
 		TexMaker bla(outPath);
 		auto abc = newOne.getGatheredInfos();
 		bla.writeTex(abc, edbOnly);
@@ -110,6 +129,7 @@ void ThumbWriter::writeThumbs()
 		std::cout << "Starting to write XML File." << std::endl;
 		XmlMaker bla2(outPath);
 		bla2.writeXml(abc, edbOnly);
-		std::cout << "Done with writing XML File." << std::endl;
+		*/
+		std::cout << "Done writing Tex and XML File." << std::endl;
 	}
 }

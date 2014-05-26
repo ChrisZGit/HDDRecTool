@@ -12,8 +12,8 @@
 #include <dbHandler.h>
 
 typedef std::pair<std::string /*folderName*/, DBHandler *> SizeThumbs;
-typedef std::vector<std::pair<std::string/*username*/, std::vector<SizeThumbs>>> UserThumbs;
-typedef std::pair<EDBHandler *, UserThumbs> PartitionThumbs;
+typedef std::pair<std::string/*username*/, std::vector<SizeThumbs>> UserThumbs;
+typedef std::pair<EDBHandler *, std::vector<UserThumbs>> PartitionThumbs;
 typedef std::vector<std::pair<std::string/*offset in partition table*/, PartitionThumbs>> AllPartitions;
 
 class DataHandler

@@ -20,7 +20,7 @@ void TexMaker::writeTex(std::vector<PartitionFiles> &p, bool edb)
 	{
 		(*file) << "No relevant partition found!" << "\n";
 	}
-	for (auto in : p)
+	for (auto& in : p)
 	{
 		writePartition(in);
 	}
@@ -101,9 +101,13 @@ void TexMaker::writeFile(FileInfo &info, bool write)
 	(*file) << "\t\\caption{Thumbnail 0x" << info.second.hash << "}" << "\n";
 	(*file) << "\t\\label{fig:Pic" << std::to_string(count) << "}" << "\n";
 	(*file) << "\\end{figure}" << "\n" << "\n";
+	(*file) << "\\vspace*{3cm}\n" << "\n";
 
 	if (info.second.foundInEDB==true)
+	{
+		(*file) << "Table with info on the next page!" << "\n";
 		(*file) << "\\newpage" << "\n";
+	}
 	(*file) << "\\begin{table}[h]" << "\n";
 	(*file) << "\t\\centering" << "\n";
 	(*file) << "\t\\begin{tabular}{c|c}" << "\n";
@@ -129,13 +133,14 @@ void TexMaker::writeThumb(ThumbCacheFiles &tcf)
 		tmp.replace(off,1," ");
 	}
 	(*file) << "\\subsubsection{" << tmp << "}" << "\n";
-	for (auto in : tcf.second)
+	(*file) << "\\hspace*{\\fill} \\\\" << "\n";
+	for (auto& in : tcf.second)
 	{
 		writeFile(in, true);
 		(*file) << "\n";
 	}
 	(*file) << "\\newpage" << "\n";
-	for (auto in : tcf.second)
+	for (auto& in : tcf.second)
 	{
 		writeFile(in, false);
 		(*file) << "\n";
@@ -150,22 +155,23 @@ void TexMaker::writeUser(UserFiles &user)
 	{
 		(*file) << "No Thumbcaches found!" << "\n";
 	}
-	for (auto in : user.second)
+	//for (auto& in : user.second)
+	for (auto in = user.second.rbegin(); in != user.second.rend(); ++in)
 	{
-		writeThumb(in);
+		writeThumb(*in);
 	}
 	(*file) << "\n";
 }
 
 void TexMaker::writePartition(PartitionFiles &partition)
 {
+	(*file) << "\\newpage" << "\n";
 	(*file) << "\\section{NTFS-Partition with offset " << partition.first << "}" << "\n";	
 	if (partition.second.empty())
 	{
 		(*file) << "No User with Thumbcaches found!" << "\n";
 	}
-	(*file) << "\\newpage" << "\n";
-	for (auto in : partition.second)
+	for (auto& in : partition.second)
 	{
 		writeUser(in);
 	}

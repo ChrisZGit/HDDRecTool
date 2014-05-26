@@ -19,7 +19,7 @@ void XmlMaker::writeXml(std::vector<PartitionFiles> &p, bool edb)
 	{
 		//(*file) << "\tNo relevant partition found!" << "\n";
 	}
-	for (auto in : p)
+	for (auto& in : p)
 	{
 		writePartition(in);
 	}
@@ -116,13 +116,13 @@ void XmlMaker::writeThumb(ThumbCacheFiles &tcf)
 	(*file) << "\t\t\t<" << tcf.first << ">" << "\n";
 	(*file) << "\t\t\t\t<Filecount> " << tcf.second.size() << " </Filecount>" << "\n";
 	(*file) << "\t\t\t\t<Ese_linked>"<< "\n";
-	for (auto in : tcf.second)
+	for (auto& in : tcf.second)
 	{
 		writeFile(in, true);
 	}
 	(*file) << "\t\t\t\t</Ese_linked>"<< "\n";
 	(*file) << "\t\t\t\t<Thumbnails_only>"<< "\n";
-	for (auto in : tcf.second)
+	for (auto& in : tcf.second)
 	{
 		writeFile(in, false);
 	}
@@ -133,9 +133,9 @@ void XmlMaker::writeThumb(ThumbCacheFiles &tcf)
 void XmlMaker::writeUser(UserFiles &user)
 {
 	(*file) << "\t\t<User name=\"" << user.first << "\">" << "\n";
-	for (auto in : user.second)
+	for (auto in = user.second.rbegin(); in != user.second.rend(); ++in)
 	{
-		writeThumb(in);
+		writeThumb(*in);
 	}
 	(*file) << "\t\t</User>" << "\n";
 }
@@ -147,7 +147,7 @@ void XmlMaker::writePartition(PartitionFiles &partition)
 	(*file) << "\t\t<Usercount>" << "\n";
 	(*file) << "\t\t\t" << partition.second.size() << "\n";
 	(*file) << "\t\t</Usercount>" << "\n";
-	for (auto in : partition.second)
+	for (auto& in : partition.second)
 	{
 		writeUser(in);
 	}
